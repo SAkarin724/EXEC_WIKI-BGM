@@ -91,11 +91,19 @@
             "named": false
           },
           {
+            "type": "Arranged",
+            "named": false
+          },
+          {
             "type": "Arrangement",
             "named": false
           },
           {
             "type": "Arranger",
+            "named": false
+          },
+          {
+            "type": "Choir",
             "named": false
           },
           {
@@ -111,6 +119,10 @@
             "named": false
           },
           {
+            "type": "Composed",
+            "named": false
+          },
+          {
             "type": "Composer",
             "named": false
           },
@@ -119,11 +131,35 @@
             "named": false
           },
           {
+            "type": "Design",
+            "named": false
+          },
+          {
+            "type": "Designer",
+            "named": false
+          },
+          {
+            "type": "Featured",
+            "named": false
+          },
+          {
+            "type": "Featuring",
+            "named": false
+          },
+          {
             "type": "Guest Vocal",
             "named": false
           },
           {
+            "type": "Guest Vocals",
+            "named": false
+          },
+          {
             "type": "Guest vocal",
+            "named": false
+          },
+          {
+            "type": "Guest vocals",
             "named": false
           },
           {
@@ -151,11 +187,23 @@
             "named": false
           },
           {
+            "type": "Lyricists",
+            "named": false
+          },
+          {
             "type": "Lyrics",
             "named": false
           },
           {
+            "type": "Mastered",
+            "named": false
+          },
+          {
             "type": "Mastering",
+            "named": false
+          },
+          {
+            "type": "Mixed",
             "named": false
           },
           {
@@ -167,6 +215,22 @@
             "named": false
           },
           {
+            "type": "Narrated",
+            "named": false
+          },
+          {
+            "type": "Narrater",
+            "named": false
+          },
+          {
+            "type": "Narration",
+            "named": false
+          },
+          {
+            "type": "Narrations",
+            "named": false
+          },
+          {
             "type": "Performer",
             "named": false
           },
@@ -175,7 +239,39 @@
             "named": false
           },
           {
+            "type": "Recorded",
+            "named": false
+          },
+          {
             "type": "Recording",
+            "named": false
+          },
+          {
+            "type": "Sound Direct",
+            "named": false
+          },
+          {
+            "type": "Sound Direction",
+            "named": false
+          },
+          {
+            "type": "Sound Director",
+            "named": false
+          },
+          {
+            "type": "Sound direct",
+            "named": false
+          },
+          {
+            "type": "Sound direction",
+            "named": false
+          },
+          {
+            "type": "Sound director",
+            "named": false
+          },
+          {
+            "type": "Storyteller",
             "named": false
           },
           {
@@ -183,11 +279,63 @@
             "named": false
           },
           {
+            "type": "Vocal Direct",
+            "named": false
+          },
+          {
+            "type": "Vocal Direction",
+            "named": false
+          },
+          {
+            "type": "Vocal Director",
+            "named": false
+          },
+          {
+            "type": "Vocal Edited",
+            "named": false
+          },
+          {
+            "type": "Vocal Editor",
+            "named": false
+          },
+          {
+            "type": "Vocal direct",
+            "named": false
+          },
+          {
+            "type": "Vocal direction",
+            "named": false
+          },
+          {
+            "type": "Vocal director",
+            "named": false
+          },
+          {
+            "type": "Vocal edit",
+            "named": false
+          },
+          {
+            "type": "Vocal edited",
+            "named": false
+          },
+          {
             "type": "Vocalist",
             "named": false
           },
           {
+            "type": "Vocalists",
+            "named": false
+          },
+          {
+            "type": "Vocals",
+            "named": false
+          },
+          {
             "type": "arrange",
+            "named": false
+          },
+          {
+            "type": "arranged",
             "named": false
           },
           {
@@ -196,6 +344,10 @@
           },
           {
             "type": "arranger",
+            "named": false
+          },
+          {
+            "type": "choir",
             "named": false
           },
           {
@@ -211,6 +363,10 @@
             "named": false
           },
           {
+            "type": "composed",
+            "named": false
+          },
+          {
             "type": "composer",
             "named": false
           },
@@ -219,7 +375,27 @@
             "named": false
           },
           {
+            "type": "design",
+            "named": false
+          },
+          {
+            "type": "designer",
+            "named": false
+          },
+          {
+            "type": "featured",
+            "named": false
+          },
+          {
+            "type": "featuring",
+            "named": false
+          },
+          {
             "type": "guest vocal",
+            "named": false
+          },
+          {
+            "type": "guest vocals",
             "named": false
           },
           {
@@ -247,11 +423,23 @@
             "named": false
           },
           {
+            "type": "lyricists",
+            "named": false
+          },
+          {
             "type": "lyrics",
             "named": false
           },
           {
+            "type": "mastered",
+            "named": false
+          },
+          {
             "type": "mastering",
+            "named": false
+          },
+          {
+            "type": "mixed",
             "named": false
           },
           {
@@ -263,6 +451,22 @@
             "named": false
           },
           {
+            "type": "narrated",
+            "named": false
+          },
+          {
+            "type": "narrater",
+            "named": false
+          },
+          {
+            "type": "narration",
+            "named": false
+          },
+          {
+            "type": "narrations",
+            "named": false
+          },
+          {
             "type": "performer",
             "named": false
           },
@@ -271,7 +475,27 @@
             "named": false
           },
           {
+            "type": "recorded",
+            "named": false
+          },
+          {
             "type": "recording",
+            "named": false
+          },
+          {
+            "type": "sound direct",
+            "named": false
+          },
+          {
+            "type": "sound direction",
+            "named": false
+          },
+          {
+            "type": "sound director",
+            "named": false
+          },
+          {
+            "type": "storyteller",
             "named": false
           },
           {
@@ -279,7 +503,47 @@
             "named": false
           },
           {
+            "type": "vocal direct",
+            "named": false
+          },
+          {
+            "type": "vocal direction",
+            "named": false
+          },
+          {
+            "type": "vocal director",
+            "named": false
+          },
+          {
+            "type": "vocal edit",
+            "named": false
+          },
+          {
+            "type": "vocal edited",
+            "named": false
+          },
+          {
+            "type": "vocal editor",
+            "named": false
+          },
+          {
             "type": "vocalist",
+            "named": false
+          },
+          {
+            "type": "vocalists",
+            "named": false
+          },
+          {
+            "type": "vocals",
+            "named": false
+          },
+          {
+            "type": "こーらす",
+            "named": false
+          },
+          {
+            "type": "でざいん",
             "named": false
           },
           {
@@ -288,6 +552,62 @@
           },
           {
             "type": "イラスト",
+            "named": false
+          },
+          {
+            "type": "ウォイスエディット",
+            "named": false
+          },
+          {
+            "type": "オールデザイン",
+            "named": false
+          },
+          {
+            "type": "クワイア",
+            "named": false
+          },
+          {
+            "type": "コーラス",
+            "named": false
+          },
+          {
+            "type": "サウンドディレクション",
+            "named": false
+          },
+          {
+            "type": "サウンドディレクト",
+            "named": false
+          },
+          {
+            "type": "サウンドデレクション",
+            "named": false
+          },
+          {
+            "type": "デザイン",
+            "named": false
+          },
+          {
+            "type": "ナレーション",
+            "named": false
+          },
+          {
+            "type": "ナレータ",
+            "named": false
+          },
+          {
+            "type": "ナレーター",
+            "named": false
+          },
+          {
+            "type": "フューチャリング",
+            "named": false
+          },
+          {
+            "type": "ボイスエディター",
+            "named": false
+          },
+          {
+            "type": "ボイスエディット",
             "named": false
           },
           {
@@ -303,7 +623,19 @@
             "named": false
           },
           {
+            "type": "ヴォイスエディティング",
+            "named": false
+          },
+          {
             "type": "乐器",
+            "named": false
+          },
+          {
+            "type": "人声指导",
+            "named": false
+          },
+          {
+            "type": "人声编辑",
             "named": false
           },
           {
@@ -367,7 +699,19 @@
             "named": false
           },
           {
+            "type": "合唱",
+            "named": false
+          },
+          {
+            "type": "和声",
+            "named": false
+          },
+          {
             "type": "声乐",
+            "named": false
+          },
+          {
+            "type": "客串",
             "named": false
           },
           {
@@ -375,11 +719,23 @@
             "named": false
           },
           {
+            "type": "念白",
+            "named": false
+          },
+          {
             "type": "插图",
             "named": false
           },
           {
+            "type": "旁白",
+            "named": false
+          },
+          {
             "type": "歌唱",
+            "named": false
+          },
+          {
+            "type": "母带",
             "named": false
           },
           {
@@ -404,6 +760,18 @@
           },
           {
             "type": "艺术家",
+            "named": false
+          },
+          {
+            "type": "设计",
+            "named": false
+          },
+          {
+            "type": "音响监督",
+            "named": false
+          },
+          {
+            "type": "音響監督",
             "named": false
           }
         ]
@@ -482,11 +850,19 @@
     "named": false
   },
   {
+    "type": "Arranged",
+    "named": false
+  },
+  {
     "type": "Arrangement",
     "named": false
   },
   {
     "type": "Arranger",
+    "named": false
+  },
+  {
+    "type": "Choir",
     "named": false
   },
   {
@@ -502,6 +878,10 @@
     "named": false
   },
   {
+    "type": "Composed",
+    "named": false
+  },
+  {
     "type": "Composer",
     "named": false
   },
@@ -514,11 +894,35 @@
     "named": false
   },
   {
+    "type": "Design",
+    "named": false
+  },
+  {
+    "type": "Designer",
+    "named": false
+  },
+  {
+    "type": "Featured",
+    "named": false
+  },
+  {
+    "type": "Featuring",
+    "named": false
+  },
+  {
     "type": "Guest Vocal",
     "named": false
   },
   {
+    "type": "Guest Vocals",
+    "named": false
+  },
+  {
     "type": "Guest vocal",
+    "named": false
+  },
+  {
+    "type": "Guest vocals",
     "named": false
   },
   {
@@ -546,11 +950,23 @@
     "named": false
   },
   {
+    "type": "Lyricists",
+    "named": false
+  },
+  {
     "type": "Lyrics",
     "named": false
   },
   {
+    "type": "Mastered",
+    "named": false
+  },
+  {
     "type": "Mastering",
+    "named": false
+  },
+  {
+    "type": "Mixed",
     "named": false
   },
   {
@@ -562,6 +978,22 @@
     "named": false
   },
   {
+    "type": "Narrated",
+    "named": false
+  },
+  {
+    "type": "Narrater",
+    "named": false
+  },
+  {
+    "type": "Narration",
+    "named": false
+  },
+  {
+    "type": "Narrations",
+    "named": false
+  },
+  {
     "type": "Performer",
     "named": false
   },
@@ -570,7 +1002,39 @@
     "named": false
   },
   {
+    "type": "Recorded",
+    "named": false
+  },
+  {
     "type": "Recording",
+    "named": false
+  },
+  {
+    "type": "Sound Direct",
+    "named": false
+  },
+  {
+    "type": "Sound Direction",
+    "named": false
+  },
+  {
+    "type": "Sound Director",
+    "named": false
+  },
+  {
+    "type": "Sound direct",
+    "named": false
+  },
+  {
+    "type": "Sound direction",
+    "named": false
+  },
+  {
+    "type": "Sound director",
+    "named": false
+  },
+  {
+    "type": "Storyteller",
     "named": false
   },
   {
@@ -578,11 +1042,63 @@
     "named": false
   },
   {
+    "type": "Vocal Direct",
+    "named": false
+  },
+  {
+    "type": "Vocal Direction",
+    "named": false
+  },
+  {
+    "type": "Vocal Director",
+    "named": false
+  },
+  {
+    "type": "Vocal Edited",
+    "named": false
+  },
+  {
+    "type": "Vocal Editor",
+    "named": false
+  },
+  {
+    "type": "Vocal direct",
+    "named": false
+  },
+  {
+    "type": "Vocal direction",
+    "named": false
+  },
+  {
+    "type": "Vocal director",
+    "named": false
+  },
+  {
+    "type": "Vocal edit",
+    "named": false
+  },
+  {
+    "type": "Vocal edited",
+    "named": false
+  },
+  {
     "type": "Vocalist",
     "named": false
   },
   {
+    "type": "Vocalists",
+    "named": false
+  },
+  {
+    "type": "Vocals",
+    "named": false
+  },
+  {
     "type": "arrange",
+    "named": false
+  },
+  {
+    "type": "arranged",
     "named": false
   },
   {
@@ -591,6 +1107,10 @@
   },
   {
     "type": "arranger",
+    "named": false
+  },
+  {
+    "type": "choir",
     "named": false
   },
   {
@@ -610,6 +1130,10 @@
     "named": false
   },
   {
+    "type": "composed",
+    "named": false
+  },
+  {
     "type": "composer",
     "named": false
   },
@@ -626,7 +1150,27 @@
     "named": true
   },
   {
+    "type": "design",
+    "named": false
+  },
+  {
+    "type": "designer",
+    "named": false
+  },
+  {
+    "type": "featured",
+    "named": false
+  },
+  {
+    "type": "featuring",
+    "named": false
+  },
+  {
     "type": "guest vocal",
+    "named": false
+  },
+  {
+    "type": "guest vocals",
     "named": false
   },
   {
@@ -654,11 +1198,23 @@
     "named": false
   },
   {
+    "type": "lyricists",
+    "named": false
+  },
+  {
     "type": "lyrics",
     "named": false
   },
   {
+    "type": "mastered",
+    "named": false
+  },
+  {
     "type": "mastering",
+    "named": false
+  },
+  {
+    "type": "mixed",
     "named": false
   },
   {
@@ -667,6 +1223,22 @@
   },
   {
     "type": "music",
+    "named": false
+  },
+  {
+    "type": "narrated",
+    "named": false
+  },
+  {
+    "type": "narrater",
+    "named": false
+  },
+  {
+    "type": "narration",
+    "named": false
+  },
+  {
+    "type": "narrations",
     "named": false
   },
   {
@@ -682,7 +1254,27 @@
     "named": false
   },
   {
+    "type": "recorded",
+    "named": false
+  },
+  {
     "type": "recording",
+    "named": false
+  },
+  {
+    "type": "sound direct",
+    "named": false
+  },
+  {
+    "type": "sound direction",
+    "named": false
+  },
+  {
+    "type": "sound director",
+    "named": false
+  },
+  {
+    "type": "storyteller",
     "named": false
   },
   {
@@ -690,7 +1282,39 @@
     "named": false
   },
   {
+    "type": "vocal direct",
+    "named": false
+  },
+  {
+    "type": "vocal direction",
+    "named": false
+  },
+  {
+    "type": "vocal director",
+    "named": false
+  },
+  {
+    "type": "vocal edit",
+    "named": false
+  },
+  {
+    "type": "vocal edited",
+    "named": false
+  },
+  {
+    "type": "vocal editor",
+    "named": false
+  },
+  {
     "type": "vocalist",
+    "named": false
+  },
+  {
+    "type": "vocalists",
+    "named": false
+  },
+  {
+    "type": "vocals",
     "named": false
   },
   {
@@ -702,11 +1326,75 @@
     "named": false
   },
   {
+    "type": "こーらす",
+    "named": false
+  },
+  {
+    "type": "でざいん",
+    "named": false
+  },
+  {
     "type": "アレンジ",
     "named": false
   },
   {
     "type": "イラスト",
+    "named": false
+  },
+  {
+    "type": "ウォイスエディット",
+    "named": false
+  },
+  {
+    "type": "オールデザイン",
+    "named": false
+  },
+  {
+    "type": "クワイア",
+    "named": false
+  },
+  {
+    "type": "コーラス",
+    "named": false
+  },
+  {
+    "type": "サウンドディレクション",
+    "named": false
+  },
+  {
+    "type": "サウンドディレクト",
+    "named": false
+  },
+  {
+    "type": "サウンドデレクション",
+    "named": false
+  },
+  {
+    "type": "デザイン",
+    "named": false
+  },
+  {
+    "type": "ナレーション",
+    "named": false
+  },
+  {
+    "type": "ナレータ",
+    "named": false
+  },
+  {
+    "type": "ナレーター",
+    "named": false
+  },
+  {
+    "type": "フューチャリング",
+    "named": false
+  },
+  {
+    "type": "ボイスエディター",
+    "named": false
+  },
+  {
+    "type": "ボイスエディット",
     "named": false
   },
   {
@@ -722,7 +1410,19 @@
     "named": false
   },
   {
+    "type": "ヴォイスエディティング",
+    "named": false
+  },
+  {
     "type": "乐器",
+    "named": false
+  },
+  {
+    "type": "人声指导",
+    "named": false
+  },
+  {
+    "type": "人声编辑",
     "named": false
   },
   {
@@ -786,7 +1486,19 @@
     "named": false
   },
   {
+    "type": "合唱",
+    "named": false
+  },
+  {
+    "type": "和声",
+    "named": false
+  },
+  {
     "type": "声乐",
+    "named": false
+  },
+  {
+    "type": "客串",
     "named": false
   },
   {
@@ -794,11 +1506,23 @@
     "named": false
   },
   {
+    "type": "念白",
+    "named": false
+  },
+  {
     "type": "插图",
     "named": false
   },
   {
+    "type": "旁白",
+    "named": false
+  },
+  {
     "type": "歌唱",
+    "named": false
+  },
+  {
+    "type": "母带",
     "named": false
   },
   {
@@ -823,6 +1547,18 @@
   },
   {
     "type": "艺术家",
+    "named": false
+  },
+  {
+    "type": "设计",
+    "named": false
+  },
+  {
+    "type": "音响监督",
+    "named": false
+  },
+  {
+    "type": "音響監督",
     "named": false
   }
 ]

@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"postinstall": "cp node_modules/web-tree-sitter/web-tree-sitter.wasm static",
+		"postinstall": "copy node_modules\\web-tree-sitter\\web-tree-sitter.wasm static",
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",

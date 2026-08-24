@@ -14,6 +14,7 @@ const TYPE_COMPLETIONS = [
     { label: "Lyrics" },
     { label: "Arrangement" },
     { label: "Vocal" },
+    { label: "Featured" },
     { label: "Illustration" },
     { label: "Label" },
     { label: "Producer" },
@@ -51,6 +52,7 @@ const TYPE_COMPLETIONS = [
     { displayLabel: "人声指导", label: "renshengzhidao" },
     { displayLabel: "音响监督", label: "yinxiangjiandu" },
     { displayLabel: "设计", label: "sheji" },
+    { displayLabel: "客串", label: "kechuan" },
 ];
 
 function applyTypeCompletion(view: EditorView, completion: Completion, from: number, to: number) {

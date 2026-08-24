@@ -1,6 +1,8 @@
 
 const separators = ` 　\t&＆:：\/／・、；,`;
 const roles = [
+  'Custom',
+  'custom',
   'Music',
   'music',
   'Composition',
@@ -274,9 +276,11 @@ module.exports = grammar({
 
     role: $ => choice(
       $._role_instrument,
+      $._role_custom,
       $._role,
     ),
     _role_instrument: _ => token(prec(1, new RegExp(`乐器-([^${separators}]| )+`))),
+    _role_custom: _ => token(prec(1, new RegExp(`custom-([^${separators}]| )+`))),
     _role: _ => choice(...roles.map(r => field('role', r))),
 
     parts: _ => /\((Tr|tr|M|m)?\.? ?[0-9,-. ]+\)/,

@@ -21,6 +21,7 @@ const TYPE_COMPLETIONS = [
     { label: "Recording" },
     { label: "Guest vocal" },
     { label: "Mixing" },
+    { label: "Mastering" },
     { label: "Chorus" },
     { label: "Choir" },
     { label: "Narration" },

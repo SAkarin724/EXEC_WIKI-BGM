@@ -1,1 +1,1 @@
-caddy.exe run --config .\Caddyfile
+caddy file-server --root build --listen :15173

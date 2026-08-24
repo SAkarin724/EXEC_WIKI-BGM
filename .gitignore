@@ -10,3 +10,8 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vercel
 /static/web-tree-sitter.wasm
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example

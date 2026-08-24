@@ -63,7 +63,7 @@ function _parseMaybeRange(s: string) {
 
 const defaultRoleOrder = [
     '制作人', '艺术家', '作词', '作曲', '编曲', '脚本', '声乐', '乐器', '混音', '母带制作',
-    '插图', '原作', '出版方', '厂牌',
+    '插图', '原作', '出版方', '厂牌', '客串', '和声', '合唱', '人声编辑', '人声指导', '音响监督', '设计'
 ];
 
 export function orderedEntries<T>(d: Record<string, T>): [string, T][] {

@@ -45,6 +45,7 @@ const TYPE_COMPLETIONS = [
     { displayLabel: "声乐", label: "shengyue" },
     { displayLabel: "乐器", label: "yueqi" },
     { displayLabel: "混音", label: "hunyin" },
+    { displayLabel: "母带制作", label: "mudaizhizuo" },
     { displayLabel: "和声", label: "hesheng" },
     { displayLabel: "合唱", label: "hechang" },
     { displayLabel: "念白", label: "nianbai" },

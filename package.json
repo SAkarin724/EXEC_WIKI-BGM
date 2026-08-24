@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "postinstall": "copy node_modules\\web-tree-sitter\\web-tree-sitter.wasm static",
+    "postinstall": "node -e \"require('fs').copyFileSync('node_modules/web-tree-sitter/web-tree-sitter.wasm', 'static/web-tree-sitter.wasm')\"",
     "dev": "vite dev",
     "build": "vite build",
     "preview": "npm run build && wrangler dev",

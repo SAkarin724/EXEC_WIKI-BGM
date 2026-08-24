@@ -1267,7 +1267,31 @@
           "name": "role",
           "content": {
             "type": "STRING",
-            "value": "Vocal edit"
+            "value": "Vocal Edit"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "vocal edition"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "Vocal edition"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "Vocal Edition"
           }
         },
         {
@@ -1308,6 +1332,14 @@
           "content": {
             "type": "STRING",
             "value": "Vocal Editor"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "Vocal editor"
           }
         },
         {

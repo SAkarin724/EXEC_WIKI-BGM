@@ -74,6 +74,7 @@ export const ROLE_MAP: { [name: string]: Role[] } = {
     'vocal edit': [Role.VE],
     'vocal edited': [Role.VE],
     'vocal editor': [Role.VE],
+    'vocal edition': [Role.VE],
     'vocal direct': [Role.VD],
     'vocal direction': [Role.VD],
     'vocal director': [Role.VD],

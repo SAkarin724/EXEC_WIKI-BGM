@@ -291,7 +291,15 @@
             "named": false
           },
           {
+            "type": "Vocal Edit",
+            "named": false
+          },
+          {
             "type": "Vocal Edited",
+            "named": false
+          },
+          {
+            "type": "Vocal Edition",
             "named": false
           },
           {
@@ -316,6 +324,14 @@
           },
           {
             "type": "Vocal edited",
+            "named": false
+          },
+          {
+            "type": "Vocal edition",
+            "named": false
+          },
+          {
+            "type": "Vocal editor",
             "named": false
           },
           {
@@ -520,6 +536,10 @@
           },
           {
             "type": "vocal edited",
+            "named": false
+          },
+          {
+            "type": "vocal edition",
             "named": false
           },
           {
@@ -1054,7 +1074,15 @@
     "named": false
   },
   {
+    "type": "Vocal Edit",
+    "named": false
+  },
+  {
     "type": "Vocal Edited",
+    "named": false
+  },
+  {
+    "type": "Vocal Edition",
     "named": false
   },
   {
@@ -1079,6 +1107,14 @@
   },
   {
     "type": "Vocal edited",
+    "named": false
+  },
+  {
+    "type": "Vocal edition",
+    "named": false
+  },
+  {
+    "type": "Vocal editor",
     "named": false
   },
   {
@@ -1299,6 +1335,10 @@
   },
   {
     "type": "vocal edited",
+    "named": false
+  },
+  {
+    "type": "vocal edition",
     "named": false
   },
   {

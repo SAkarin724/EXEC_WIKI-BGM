@@ -67,10 +67,13 @@
 			.join('\n');
 		const relaTable = currentRelease
 			.intoCreatorSummary(name2staff)
-			.map(
-				([bid, rt]) =>
-					`https://bgm.tv/person/${bid}  ${rt.map(([r, pn]) => (pn ? `${r}#${pn}` : r)).join('  ')}`
-			)
+			.map(([bid, rt]) => {
+				// filted custom role from relaTable
+				const filteredRt = rt.filter(([r]) => !r.startsWith('custom-'));
+				if (filteredRt.length === 0) return null;
+				return `https://bgm.tv/person/${bid}  ${filteredRt.map(([r, pn]) => (pn ? `${r}#${pn}` : r)).join('  ')}`;
+			})
+			.filter(line => line !== null)
 			.join('\n');
 		return {
 			sid: sidState.val,

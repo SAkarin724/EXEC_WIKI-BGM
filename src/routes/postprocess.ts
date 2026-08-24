@@ -34,6 +34,8 @@ export enum Role {
 }
 
 // NOTE: This should be kept in sync with `grammar.js` in the tree-sitter-rkgk repo.
+//       Execute 'tree-sitter generate' then build 'tree-sitter build --wasm'
+//       Move wasm file to 'static/tree-sitter-rkgk.wasm' to update roles
 export const ROLE_MAP: { [name: string]: Role[] } = {
     'music': [Role.C, Role.A],
     'composition': [Role.C],
@@ -92,7 +94,7 @@ export const ROLE_MAP: { [name: string]: Role[] } = {
     'イラスト': [Role.I],
     'レーベル': [Role.RL],
     'マスタリング': [Role.MA],
-    'デザイン':  [Role.DS],
+    'デザイン': [Role.DS],
     'オールデザイン': [Role.DS],
     'でざいん': [Role.DS],
     'コーラス': [Role.CS],
@@ -271,6 +273,7 @@ export class Release {
 
         const release = new Release(credits, all_tracks, name2character);
         await release.assignRelaMap();
+        release.normalizeCustomRoles();
         return release;
     }
     private async assignRelaMap() {
@@ -332,6 +335,42 @@ export class Release {
             insEntry![1].push(...creators.map(c => `${c} (${insName})`));
             return [];
         });
+    }
+
+    /**
+     * 将 credits 中所有以 'custom-' 开头的 roleID 重命名为去掉前缀的名称，
+     * 并合并同名角色的 parts。
+    */
+    private normalizeCustomRoles(): void {
+        const newCredits: Credits = {};
+        for (const [roleID, creators] of Object.entries(this.credits)) {
+            if (roleID.startsWith('custom-')) {
+                const newRoleID = roleID.slice(7); // 去掉 "custom-"
+                if (!newCredits[newRoleID]) {
+                    newCredits[newRoleID] = {};
+                }
+                for (const [name, pd] of Object.entries(creators)) {
+                    if (newCredits[newRoleID][name]) {
+                        // 合并 parts：按 disc 合并并去重
+                        const existing = newCredits[newRoleID][name];
+                        const maxDisc = Math.max(existing.parts.length, pd.parts.length);
+                        const mergedParts: number[][] = [];
+                        for (let i = 0; i < maxDisc; i++) {
+                            const a = existing.parts[i] || [];
+                            const b = pd.parts[i] || [];
+                            const combined = Array.from(new Set([...a, ...b]));
+                            mergedParts.push(combined);
+                        }
+                        existing.parts = mergedParts;
+                    } else {
+                        newCredits[newRoleID][name] = pd;
+                    }
+                }
+            } else {
+                newCredits[roleID] = creators;
+            }
+        }
+        this.credits = newCredits;
     }
 
     /**
@@ -454,6 +493,11 @@ function parseSongCredit(
                 const roleName = cf.value.trim();
                 if (roleName.startsWith("乐器-")) {
                     roleIDs.add(roleName);
+                    break;
+                }
+                // custom roles support
+                else if (roleName.startsWith("custom-")) {
+                    roleIDs.add(roleName);   
                     break;
                 }
                 const rids = ROLE_MAP[roleName.toLowerCase()];

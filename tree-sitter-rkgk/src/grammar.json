@@ -620,6 +620,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "_role_custom"
+        },
+        {
+          "type": "SYMBOL",
           "name": "_role"
         }
       ]
@@ -635,9 +639,36 @@
         }
       }
     },
+    "_role_custom": {
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": 1,
+        "content": {
+          "type": "PATTERN",
+          "value": "custom-([^ 　\t&＆:：/／・、；,]| )+"
+        }
+      }
+    },
     "_role": {
       "type": "CHOICE",
       "members": [
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "Custom"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "custom"
+          }
+        },
         {
           "type": "FIELD",
           "name": "role",

@@ -131,6 +131,10 @@
             "named": false
           },
           {
+            "type": "Custom",
+            "named": false
+          },
+          {
             "type": "Design",
             "named": false
           },
@@ -372,6 +376,10 @@
           },
           {
             "type": "composition",
+            "named": false
+          },
+          {
+            "type": "custom",
             "named": false
           },
           {
@@ -890,6 +898,10 @@
     "named": false
   },
   {
+    "type": "Custom",
+    "named": false
+  },
+  {
     "type": "DISC",
     "named": false
   },
@@ -1144,6 +1156,10 @@
   {
     "type": "creator_sep",
     "named": true
+  },
+  {
+    "type": "custom",
+    "named": false
   },
   {
     "type": "cv_conj",

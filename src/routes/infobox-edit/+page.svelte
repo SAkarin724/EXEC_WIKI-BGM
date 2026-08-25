@@ -9,6 +9,7 @@
 	import { type SubjectData } from '../submit';
 	import { getSubjectInfo, getPersonInfo } from '$lib/client';
 	import { URL_OAUTH, sessionValid, type BGMSession } from '$lib/bangumiSession';
+	import { localStorage$state } from '../utils.svelte';
 
 	const defaultInfoBox = `
 {{Infobox Album
@@ -19,6 +20,10 @@
 	let desc = $state('');
 	let metaTags = $state('');
 	let infoBox = $state(infobox.toArrayWikiString(defaultInfoBox));
+	let metaTagsRecentCombosState = localStorage$state(
+		'metaTagsRecentCombos',
+		{} as Record<string, string[][]>
+	);
 	let showSubmitDialog = $state(false);
 	let wtype = $state<'subject' | 'person'>('subject');
 	let sid = $state(0);
@@ -95,6 +100,7 @@
 			bind:value={infoBox}
 			bind:valueMetaTags={metaTags}
 			reactiveFields={new Set()}
+			{metaTagsRecentCombosState}
 			wideFormat={true}
 			class="flex-basis-[67%] flex-grow-3"
 		/>

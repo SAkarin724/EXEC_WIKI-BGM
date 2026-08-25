@@ -64,7 +64,7 @@
 		}, 400);
 	}
 	function marshal() {
-		infoBox.storeRecentCombo(metaTagsState.val);
+		infoBox.storeRecentCombo(metaTagsState.val, metaTagsRecentCombosState);
 		const trackList = currentRelease.tracks.map((disc) => disc.map((tr) => tr.title).join('\n'));
 		const trackTable = currentRelease.tracks
 			.flatMap((disc, i) => disc.map((tr, j) => `${i + 1}|${j + 1}|${tr.title}|${tr.comment}|`))
@@ -111,7 +111,9 @@
 	) {
 		sidState.val = s.sid;
 		titleState.val = s.title;
-		metaTagsState.val = s.metaTags;
+		// For a brand-new entry (no metaTags given), carry over the global default tags
+		// configured in Settings so you don't have to re-pick them every time.
+		metaTagsState.val = s.metaTags || settingsState.val.metaTags || '';
 		trackInfoState.val = s.trackInfo;
 		setTimeout(() => {
 			// workaround: clear infobox after the infobox edit triggered by trackinfo clear
@@ -152,6 +154,12 @@
 	let sidState = localStorage$state('sid', 0);
 	let titleState = localStorage$state('title', '');
 	let metaTagsState = localStorage$state('metaTags', '');
+	// Shared "recently used tag combos" store, keyed by subject type.
+	// Used by both the in-infobox MetaTag and the global one in Settings.
+	let metaTagsRecentCombosState = localStorage$state(
+		'metaTagsRecentCombos',
+		{} as Record<string, string[][]>
+	);
 	let infoBoxState = localStorage$state(
 		'infoBox',
 		infoBox.toArrayWikiString(settingsState.val.newInfoBox)
@@ -285,6 +293,7 @@
 				bind:value={infoBoxState.val}
 				bind:valueMetaTags={metaTagsState.val}
 				{reactiveFields}
+				{metaTagsRecentCombosState}
 				class="flex-basis-[67%] flex-grow-3"
 			/>
 			<textarea
@@ -300,7 +309,12 @@
 			class="flex-basis-[28%] flex-grow-4 h-full min-h-[30.5rem] overflow-auto"
 		/>
 	</div>
-	<Settings bind:settings={settingsState.val} bind:showSettings bind:showRelaDB />
+	<Settings
+		bind:settings={settingsState.val}
+		bind:showSettings
+		bind:showRelaDB
+		{metaTagsRecentCombosState}
+	/>
 	<Toast />
 	<Scenario
 		bind:show={showTour}

@@ -1,6 +1,7 @@
 <script lang="ts" module>
 	export interface Settings extends Record<string, any> {
 		bgmUID: string;
+		metaTags: string;
 		newInfoBox: string;
 		shouldCleanCircleParentheses: boolean;
 		allowAllSpaceInCreatorName: boolean;
@@ -9,6 +10,7 @@
 	}
 	export const defaultSettings: Settings = {
 		bgmUID: '',
+		metaTags: '',
 		newInfoBox: `
 {{Infobox Album
 |中文名= 
@@ -36,22 +38,28 @@
 
 <script lang="ts">
 	import RelaDb, * as relaDb from './RelaDB.svelte';
+	import { localStorage$state } from './utils.svelte';
 	import Panel from './Panel.svelte';
 	import Button from './Button.svelte';
 	import LinkSvg from '$lib/LinkSvg.svelte';
 	import { toast } from './Toast.svelte';
 	import Tooltip from '$lib/Tooltip.svelte';
-	import { localStorage$state } from './utils.svelte';
+	import { untrack } from 'svelte';
+	import MetaTag, {
+		storeRecentCombo as metaTagStoreRecentCombo
+	} from '$lib/richInfoBox/MetaTag.svelte';
 
 	interface SettingsProps {
 		settings: Settings;
 		showSettings: boolean;
 		showRelaDB: boolean;
+		metaTagsRecentCombosState: { val: Record<string, string[][]> };
 	}
 	let {
 		settings: __settings = $bindable(),
 		showSettings = $bindable(),
-		showRelaDB = $bindable()
+		showRelaDB = $bindable(),
+		metaTagsRecentCombosState
 	}: SettingsProps = $props();
 	// 啊，最后还是得上元编程么……
 	// The settings (__settings) object pass-in is a normal object, but the settings object within the component is a Proxy.
@@ -94,6 +102,20 @@
 	];
 
 	let lastExportTime = localStorage$state('last-export-time', Date.now());
+	// The global tag picker only needs the music tags (this tool targets music releases).
+	const metaTagSubjectType = '音乐';
+	const recentCombos = $derived(metaTagsRecentCombosState.val[metaTagSubjectType] ?? []);
+	function storeRecentCombo(combo: string) {
+		if (combo.trim() === '') return;
+		metaTagsRecentCombosState.val = {
+			...metaTagsRecentCombosState.val,
+			[metaTagSubjectType]: metaTagStoreRecentCombo(
+				combo,
+				$state.snapshot(metaTagsRecentCombosState.val[metaTagSubjectType] ?? []),
+				metaTagSubjectType
+			)
+		};
+	}
 	async function importBackup() {
 		let el = document.createElement('input');
 		el.type = 'file';
@@ -126,6 +148,15 @@
 	function closeRelaDB() {
 		showRelaDB = false;
 	}
+	// Remember each chosen global tag combo so it shows up in "recent combos".
+	// storeRecentCombo reads & writes metaTagsRecentCombosState.val, so wrap it in
+	// untrack to keep the effect dependent only on settings.metaTags. Otherwise the
+	// write would re-trigger the effect and loop forever (effect_update_depth_exceeded).
+	$effect(() => {
+		const combo = settings.metaTags;
+		if (combo.trim() === '') return;
+		untrack(() => storeRecentCombo(combo));
+	});
 </script>
 
 <div class="fixed bottom-0 right-[3rem]">
@@ -158,13 +189,20 @@
 		/>
 	</div>
 	<div class={panelElClass}>
+		<MetaTag
+			bind:value={settings.metaTags}
+			subjectType={metaTagSubjectType}
+			{recentCombos}
+			class="border-solid border-1 border-light-9 rounded-md w-[99%]"
+		/>
+	</div>
+	<div class={panelElClass}>
 		<label class={labelClass} for="newInfoBox">Infobox 模板</label>
 		<textarea
 			id="newInfoBox"
 			spellcheck="false"
 			class="input-bgm w-[95%] h-[19.5rem] p-1.5 text-sm"
-			bind:value={settings.newInfoBox}
-		></textarea>
+			bind:value={settings.newInfoBox}></textarea>
 	</div>
 	<div class={panelElClass}>
 		<div class={labelClass}>解析器</div>

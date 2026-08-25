@@ -9,7 +9,6 @@
 		resetReactiveFields,
 		storeRecentCombo as metaTagStoreRecentCombo
 	} from '$lib/richInfoBox/RichInfoBox.svelte';
-	import { localStorage$state } from './utils.svelte.ts';
 
 	export { unlinkField };
 
@@ -134,17 +133,16 @@
 		Crt: '人物角色'
 	};
 	let subjectType = $derived(WIKI2SUBJECT[valueWiki.type]);
-	const metaTagsRecentCombosState = localStorage$state(
-		'metaTagsRecentCombos',
-		{} as Record<string, string[][]>
-	);
-	export function storeRecentCombo(combo: string): void {
+	export function storeRecentCombo(
+		combo: string,
+		combosState: { val: Record<string, string[][]> }
+	): void {
 		if (combo.trim() === '') return;
-		metaTagsRecentCombosState.val = {
-			...metaTagsRecentCombosState.val,
+		combosState.val = {
+			...combosState.val,
 			[subjectType]: metaTagStoreRecentCombo(
 				combo,
-				$state.snapshot(metaTagsRecentCombosState.val[subjectType] ?? []),
+				$state.snapshot(combosState.val[subjectType] ?? []),
 				subjectType
 			)
 		};
@@ -162,6 +160,7 @@
 		reactiveFields: Set<string>;
 		wideFormat?: boolean;
 		valueMetaTags: string;
+		metaTagsRecentCombosState: { val: Record<string, string[][]> };
 		class?: string;
 	}
 	// NOTE: valueExport is for passing out only; changes should be made with the exported functions
@@ -170,6 +169,7 @@
 		reactiveFields,
 		wideFormat = false,
 		valueMetaTags = $bindable(),
+		metaTagsRecentCombosState,
 		class: class_ = '',
 		...rest
 	}: InfoBoxProps = $props();
@@ -249,7 +249,7 @@
 			{update}
 			bind:valueMetaTags
 			{subjectType}
-			recentCombos={metaTagsRecentCombosState.val[subjectType]}
+			recentCombos={metaTagsRecentCombosState.val[subjectType] ?? []}
 		/>
 	{:else}
 		{#if subjectType !== '人物角色'}

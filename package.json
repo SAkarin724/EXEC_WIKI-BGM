@@ -45,6 +45,7 @@
     "@lezer/common": "^1.5.2",
     "@lezer/highlight": "^1.2.3",
     "@nozbe/microfuzz": "^1.0.0",
+    "deno-cli": "^1.0.5",
     "dexie": "^4.4.4",
     "fast-array-diff": "^1.1.0",
     "web-tree-sitter": "^0.26.11"

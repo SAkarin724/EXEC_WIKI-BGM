@@ -41,7 +41,7 @@
 		value = $bindable(),
 		subjectType,
 		recentCombos,
-		class: class_ = ''
+		class: class_ = '',
 	}: MetaTagProps = $props();
 	let tagSet = $derived(new Set(value.split(/\s+/).filter((tagName) => tagName !== '')));
 
@@ -59,7 +59,7 @@
 	}
 </script>
 
-<div id={id} class="{class_} py-1 mb-2 bg-bgm-lightgrey rounded-md">
+<div class="{class_} py-1 mb-2 bg-bgm-lightgrey rounded-md">
 	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 	<div
 		aria-label="点击编辑标签"

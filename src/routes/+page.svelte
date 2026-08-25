@@ -10,6 +10,7 @@
 	import { type RawRelease } from './lang-rkgk.ts';
 	import { Release, Role } from './postprocess.ts';
 	import { resolveRelaMap } from './disambiguation.ts';
+	import { buildSelectivePatch } from './patchExport.ts';
 
 	import Header from '$lib/Header.svelte';
 	import Settings, { defaultSettings } from './Settings.svelte';
@@ -91,13 +92,51 @@
 		};
 	}
 	async function pack() {
-		const data = marshal();
-		const text = shouldPackRelaOnly ? data.relaTable : JSON.stringify(data);
-		await navigator.clipboard.writeText(text);
+		const data: Record<string, unknown> = marshal();
+		if (shouldPackRelaOnly) {
+			await navigator.clipboard.writeText(data.relaTable as string);
+		} else {
+			// Ported from the userscript's `patchExportedJsonString`: attach the
+			// computed patch + policy so the clipboard JSON can be applied directly.
+			const useFullPatch = settingsState.val.defaultFullPatch;
+			const { patchText } = buildSelectivePatch(currentRelease, name2staff, useFullPatch);
+			if (patchText) {
+				data.patch = patchText;
+				data.patchPolicy = useFullPatch ? 'full' : 'selective';
+			} else {
+				data.patch = '';
+				data.patchPolicy = 'none';
+			}
+			await navigator.clipboard.writeText(JSON.stringify(data));
+		}
 		toast('已复制到剪贴板');
 		if (shouldPackThenOpen) {
 			setTimeout(() => window.open('https://bgm.tv/new_subject/3'), 700);
 		}
+	}
+	// Copy a selective (or full, with Shift) patch generated from the current
+	// Release, ported from the "Staff Tag Fix" userscript.
+	// Hold Alt to copy the selective rela table (submit data) instead of the text.
+	async function copyPatch() {
+		const { relaData, patchText } = buildSelectivePatch(currentRelease, name2staff, useShiftOnCopy);
+		if (useAltOnCopy) {
+			if (!relaData.length) {
+				toast('当前没有符合条件的关联', { alert: true });
+				return;
+			}
+			const relaText = relaData
+				.map((r) => `https://bgm.tv/person/${r.id}  ${r.relation}${r.eps ? `#${r.eps}` : ''}`)
+				.join('\n');
+			await navigator.clipboard.writeText(relaText);
+			toast(useShiftOnCopy ? '已复制全部关联表' : '已复制符合条件的关联表');
+			return;
+		}
+		if (!patchText) {
+			toast('当前没有符合条件的 Patch', { alert: true });
+			return;
+		}
+		await navigator.clipboard.writeText(patchText);
+		toast(useShiftOnCopy ? '已复制全部 Patch' : '已复制 Patch 到剪贴板');
 	}
 	function setState(
 		s: ContentState = {
@@ -184,10 +223,15 @@
 	let optMode = $state(false);
 	let shiftMode = $state(false);
 	let hoverPackBtn = $state(false);
+	let hoverCopyPatchBtn = $state(false);
 	let shouldPackRelaOnly = $derived(hoverPackBtn && optMode);
 	let shouldPackThenOpen = $derived(
 		(hoverPackBtn && shiftMode) !== settingsState.val.defaultOpenBGMNewAfterPack
 	);
+	// Like the pack button, Shift / Alt only take effect once the mouse is over
+	// the "复制 Patch" button (hover), not from the bare key press alone.
+	let useAltOnCopy = $derived(hoverCopyPatchBtn && optMode);
+	let useShiftOnCopy = $derived(hoverCopyPatchBtn && shiftMode);
 
 	const editor = {
 		associableFields,
@@ -264,6 +308,19 @@
 		<LongpressButton class="w-33 text-lg" onclick={clear}>长按<wbr />再来一张</LongpressButton>
 		<Button class="w-20 text-lg" onclick={async () => (showImportDialog = true)}>导入…</Button>
 		<div class="flex-grow-1 h-[1rem] mx-3 p-2"></div>
+		<Button
+			class="w-31 text-lg"
+			onclick={copyPatch}
+			onmouseenter={() => (hoverCopyPatchBtn = true)}
+			onmouseleave={() => (hoverCopyPatchBtn = false)}
+			title={useAltOnCopy
+				? (useShiftOnCopy ? '复制全部关联表（提交数据）' : '只复制符合条件的关联表（提交数据）')
+				: (useShiftOnCopy ? '复制全部 Patch 到剪贴板' : '只复制符合条件的 Patch 到剪贴板')}
+		>
+			{useAltOnCopy
+				? (useShiftOnCopy ? '全部关联' : 'Selective 关联')
+				: (useShiftOnCopy ? '复制全部 Patch' : '复制 Patch')}
+		</Button>
 		<Button
 			class="{!shouldPackRelaOnly && shouldPackThenOpen ? '' : 'w-31'} text-lg"
 			onclick={pack}

@@ -7,6 +7,7 @@
 		allowAllSpaceInCreatorName: boolean;
 		shouldAutofillArrangment: boolean;
 		defaultOpenBGMNewAfterPack: boolean;
+		defaultFullPatch: boolean;
 	}
 	export const defaultSettings: Settings = {
 		bgmUID: '',
@@ -32,7 +33,8 @@
 		shouldCleanCircleParentheses: true,
 		allowAllSpaceInCreatorName: false,
 		shouldAutofillArrangment: true,
-		defaultOpenBGMNewAfterPack: false
+		defaultOpenBGMNewAfterPack: false,
+		defaultFullPatch: true
 	};
 </script>
 
@@ -98,6 +100,11 @@
 			id: 'defaultOpenBGMNewAfterPack',
 			text: '默认将打包升级为二连击',
 			hint: '也可按住 Shift 键来切换成非默认行为'
+		},
+		{
+			id: 'defaultFullPatch',
+			text: '默认将打包写入全量Patch',
+			hint: '关闭后打包默认写入符合条件（selective）的 Patch'
 		}
 	];
 

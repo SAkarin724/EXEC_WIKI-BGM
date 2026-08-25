@@ -41,9 +41,26 @@
 		editRich(vw, valueWiki.data);
 	}
 
-	export function edit(entries: [string, string][]): void {
+	export function edit(
+		entries: [string, string][],
+		protectedKeys?: Set<string>,
+		customRows?: Set<string>
+	): void {
 		if (!modeRich) {
+			const newKeys = new Set(entries.map(([k]) => k));
 			let lines = value.split('\n');
+			// Only drop field lines that were previously synced from custom roles
+			// (customRows) and are no longer in the summary. Other existing lines
+			// (e.g. manually added fields) are preserved.
+			if (customRows) {
+				lines = lines.filter((line) => {
+					const m = /^\|(.+)=/.exec(line);
+					if (!m) return true; // keep non-field lines ({{Infobox ... and }})
+					const k = m[1].trim();
+					if (!customRows.has(k)) return true;
+					return newKeys.has(k) || (protectedKeys?.has(k) ?? false);
+				});
+			}
 			entries.forEach(([key, val]) => {
 				const i = lines.findIndex((line) => line.startsWith(`|${key}=`));
 				if (!val && i === -1) return;
@@ -56,7 +73,7 @@
 			});
 			value = lines.join('\n');
 		} else {
-			editRich(entries, valueWiki.data);
+			editRich(entries, valueWiki.data, protectedKeys, customRows);
 		}
 	}
 	export function editField(
@@ -248,8 +265,6 @@
 			class={'input-bgm w-[94%] p-[0.5rem] text-sm break-all ' +
 				(subjectType === '人物角色' ? 'h-[calc(100%-1.2rem)]' : 'h-[calc(100%-4.4rem)] ')}
 			spellcheck="false"
-			bind:value
-		>
-		</textarea>
+			bind:value></textarea>
 	{/if}
 </div>

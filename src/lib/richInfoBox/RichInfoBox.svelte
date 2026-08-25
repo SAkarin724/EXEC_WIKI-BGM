@@ -42,7 +42,29 @@
 
 	let reactiveFieldsUnlinked: Record<string, boolean> = $state({});
 
-	export function edit(entries: ArrayWikiData, valueWiki: ArrayWikiData): void {
+	export function edit(
+		entries: ArrayWikiData,
+		valueWiki: ArrayWikiData,
+		protectedKeys?: Set<string>,
+		customRows?: Set<string>
+	): void {
+		const newKeys = new Set(entries.map(([k]) => k));
+		// Only drop rows that were previously synced from custom roles (customRows)
+		// and no longer exist in the new summary. This covers deleting a custom role
+		// or renaming it (the stale row is removed so the new row gets appended at
+		// the end). Any other existing rows (e.g. manually added fields) are kept.
+		if (customRows) {
+			for (let i = valueWiki.length - 1; i >= 0; i--) {
+				const [k] = valueWiki[i];
+				if (
+					customRows.has(k) &&
+					!newKeys.has(k) &&
+					!(protectedKeys?.has(k) ?? false)
+				) {
+					valueWiki.splice(i, 1);
+				}
+			}
+		}
 		entries.forEach(([key, val]) => {
 			if (reactiveFieldsUnlinked[key]) return;
 			const i = valueWiki.findIndex(([k, _]) => k === key);

@@ -41,6 +41,10 @@
 	let dupResolution = $state(new SvelteMap<string, number>());
 	let dupResolutionEntries = $derived(Array.from(dupResolution.entries()));
 	let name2staff = $derived(resolveRelaMap(currentRelease.relaMap, dupResolutionEntries));
+	// Display names of the custom roles currently synced into the infobox.
+	// Used so that deleting / renaming a custom role only removes its own row
+	// from the infobox while preserving every other (manually added) field.
+	let syncedCustomRows = $state(new Set<string>());
 
 	function clear() {
 		pushState(
@@ -132,7 +136,16 @@
 			.map(([roleID, creators]) => [roleID, creators.join('、')]);
 		const nDiscs = currentRelease.tracks.length;
 		if (nDiscs > 1) summary.push(['碟片数量', nDiscs.toString()]);
-		untrack(() => infoBox.edit(summary));
+		const customNames = new Set(
+			Object.keys(currentRelease.credits)
+				.filter((r) => r.startsWith('custom-'))
+				.map((r) => r.slice(7))
+		);
+		const previousCustomRows = untrack(() => syncedCustomRows);
+		untrack(() => {
+			infoBox.edit(summary, reactiveFields, previousCustomRows);
+			syncedCustomRows = customNames;
+		});
 	});
 
 	let settingsState = localStorage$state('settings', defaultSettings);

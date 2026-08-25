@@ -189,7 +189,9 @@
 		/>
 	</div>
 	<div class={panelElClass}>
+		<label class={labelClass} for="globalMetaTag">全局标签</label>
 		<MetaTag
+			id="globalMetaTag"
 			bind:value={settings.metaTags}
 			subjectType={metaTagSubjectType}
 			{recentCombos}

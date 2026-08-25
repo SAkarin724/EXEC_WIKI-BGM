@@ -36,14 +36,12 @@
 		subjectType: string;
 		recentCombos: string[][];
 		class?: string;
-		id?: string;
 	}
 	let {
 		value = $bindable(),
 		subjectType,
 		recentCombos,
-		class: class_ = '',
-		id
+		class: class_ = ''
 	}: MetaTagProps = $props();
 	let tagSet = $derived(new Set(value.split(/\s+/).filter((tagName) => tagName !== '')));
 

@@ -29,6 +29,7 @@ const TYPE_COMPLETIONS = [
     { label: "Vocal Direction" },
     { label: "Sound Direction" },
     { label: "Design" },
+    { label: "custom-" },
     { displayLabel: "作詞作編曲", label: "zuocizuobianqu" },
     { displayLabel: "作詞作曲", label: "zuocizuoqu" },
     { displayLabel: "作編曲", label: "zuobianqu" },

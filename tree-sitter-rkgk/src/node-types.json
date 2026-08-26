@@ -179,6 +179,14 @@
             "named": false
           },
           {
+            "type": "Jacket Illustration",
+            "named": false
+          },
+          {
+            "type": "Jacket illustration",
+            "named": false
+          },
+          {
             "type": "Label",
             "named": false
           },
@@ -432,6 +440,10 @@
           },
           {
             "type": "illustrator",
+            "named": false
+          },
+          {
+            "type": "jacket illustration",
             "named": false
           },
           {
@@ -755,6 +767,10 @@
             "named": false
           },
           {
+            "type": "插画",
+            "named": false
+          },
+          {
             "type": "旁白",
             "named": false
           },
@@ -776,6 +792,10 @@
           },
           {
             "type": "編曲",
+            "named": false
+          },
+          {
+            "type": "绘画",
             "named": false
           },
           {
@@ -967,6 +987,14 @@
   },
   {
     "type": "Illustrator",
+    "named": false
+  },
+  {
+    "type": "Jacket Illustration",
+    "named": false
+  },
+  {
+    "type": "Jacket illustration",
     "named": false
   },
   {
@@ -1235,6 +1263,10 @@
   },
   {
     "type": "illustrator",
+    "named": false
+  },
+  {
+    "type": "jacket illustration",
     "named": false
   },
   {
@@ -1570,6 +1602,10 @@
     "named": false
   },
   {
+    "type": "插画",
+    "named": false
+  },
+  {
     "type": "旁白",
     "named": false
   },
@@ -1591,6 +1627,10 @@
   },
   {
     "type": "編曲",
+    "named": false
+  },
+  {
+    "type": "绘画",
     "named": false
   },
   {

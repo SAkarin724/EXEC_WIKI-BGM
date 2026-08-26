@@ -963,6 +963,30 @@
           "name": "role",
           "content": {
             "type": "STRING",
+            "value": "Jacket Illustration"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "Jacket illustration"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "jacket illustration"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
             "value": "Illustration"
           }
         },
@@ -1908,6 +1932,22 @@
           "content": {
             "type": "STRING",
             "value": "插图"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "插画"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "绘画"
           }
         },
         {

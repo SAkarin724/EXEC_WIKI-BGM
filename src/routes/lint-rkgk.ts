@@ -47,7 +47,7 @@ export function getLinter(): Extension {
         let featEdits: { from: number, insert: string }[] = [];
         const featActions: Action[] = [
             {
-                name: "声乐", apply(view) {
+                name: "客串", apply(view) {
                     const c = featEdits.map(({ from, insert }) => ({ from, insert: `\nGuest Vocal: ${insert}` }));
                     view.dispatch({ changes: c });
                 }

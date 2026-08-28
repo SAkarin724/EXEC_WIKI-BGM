@@ -31,8 +31,7 @@ function autofixDate(value: string): string | void {
     const date = RE_DATE.exec(value);
     if (date) {
         [y, m, d] = date.slice(1).map((v) => parseInt(v));
-        if (value.includes('年')) return `${y}年${m}月${d}日${eventName}`;
-        return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}${eventName}`;
+        if (value.includes('年')) return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}${eventName}`;
     }
     const enDate = RE_EN_DATE.exec(value);
     if (enDate) {

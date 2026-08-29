@@ -65,28 +65,58 @@ export async function importPersonBatch(pids: number[]) {
     await __importPersonBatch(pids, tp, rfn, false);
 }
 
-async function __importPersonBatch(pids: number[], tp: ToastItemProps, rfn: () => void, artistOnly: boolean = true) {
-    // filter out existing entries in the database
-    const existingRec = await db.staff.where('id').anyOf(pids).toArray();
-    const existing = new Set(existingRec.map((s) => s.id));
-    pids = Array.from(new Set(pids).difference(existing));
+// 模块级互斥锁:同一时间只允许一个写入流程,
+// 避免并发同步(如 startImport 的两路、连点按钮、编辑器导入)相互覆盖/冲突。
+let importQueue: Promise<unknown> = Promise.resolve();
 
-    tp.nTotal = pids.length;
-    const results = await Promise.allSettled(
-        pids.map(async (pid) => {
-            let s: Staff, isA: boolean;
+function runExclusive<T>(fn: () => Promise<T>): Promise<T> {
+    const next = importQueue.then(fn, fn);
+    importQueue = next.catch(() => undefined);
+    return next;
+}
+
+async function __importPersonBatch(pids: number[], tp: ToastItemProps, rfn: () => void, artistOnly: boolean = true) {
+    try {
+        await runExclusive(async () => {
+            // 过滤无效 id(wiki 历史解析异常可能产生 NaN,会令 IndexedDB 查询抛 DataError)
+            pids = pids.filter((pid) => Number.isInteger(pid) && pid > 0);
+            // 用 bulkGet 逐主键查重,绕开 anyOf 在大量 key 下范围扫描可能漏查的问题
+            // (漏查会把库中已存在的人物误判为新人物,进而被下面的写入流程覆盖/删除)
+            const existingRec = await db.staff.bulkGet(pids);
+            const existing = new Set(existingRec.filter((s): s is Staff => s !== undefined).map((s) => s.id));
+            const fresh = pids.filter((pid) => !existing.has(pid));
+
+            tp.nTotal = fresh.length;
+            const results = await Promise.allSettled(
+                fresh.map(async (pid) => {
+                    let s: Staff, isA: boolean;
+                    try {
+                        [s, isA] = await getPerson(pid);
+                    } finally {
+                        tp.nDone++;
+                    }
+                    return !artistOnly || isA ? s : null;
+                })
+            );
+            const staffs = results
+                .map((r) => (r.status === 'fulfilled' ? r.value : null))
+                .filter((s) => s !== null) as Staff[];
+
+            // 原子 upsert:存在则更新、不存在则新增。
+            // 不再使用 bulkDelete + bulkAdd(两者是两个独立事务,
+            // 在并发交错或 bulkAdd 失败时会删除已有人物且无法恢复)。
+            // 分批写入,降低单事务规模与存储配额失败的风险。
+            const BATCH = 100;
             try {
-                [s, isA] = await getPerson(pid);
-            } finally {
-                tp.nDone++;
+                for (let i = 0; i < staffs.length; i += BATCH) {
+                    await db.staff.bulkPut(staffs.slice(i, i + BATCH));
+                }
+            } catch (e) {
+                toast('写入关联库失败,存储空间可能不足,请尽快导出备份!');
+                throw e;
             }
-            return !artistOnly || isA ? s : null;
-        })
-    );
-    const staffs = results
-        .map((r) => (r.status === 'fulfilled' ? r.value : null))
-        .filter((s) => s !== null) as Staff[];
-    await db.staff.bulkDelete(staffs.map((s) => s.id));
-    await db.staff.bulkAdd(staffs);
-    rfn();
+        });
+    } finally {
+        rfn();
+    }
 }

@@ -106,7 +106,7 @@ export async function getPerson(pid: number): Promise<[Staff, boolean]> {
             name: entityUnescape(result.name),
             aliases: aliasBlock ? aliasBlock.map((a: any) => entityUnescape(a.v)) : [],
         },
-        (new Set(result.career).intersection(RELEVANT_CAREERS).size > 0) // 顺带判断是否是音乐相关人物
+        (result.career ?? []).some((c: string) => RELEVANT_CAREERS.has(c)) // 顺带判断是否是音乐相关人物
     ];
 }
 
@@ -315,13 +315,13 @@ function auth(token: string, req: RequestInit = {}): RequestInit {
  * Fetcher class to limit the number of concurrent requests for a single endpoint.
  */
 class Fetcher {
-    private queue: [Request, (response: Response) => void][] = [];
+    private queue: [Request, (response: Response) => void, (error: unknown) => void][] = [];
     private running = false;
     constructor(private waitTime: number) { }
 
     async dispatch(request: Request): Promise<Response> {
-        return new Promise((resolve) => {
-            this.queue.push([request, resolve]);
+        return new Promise((resolve, reject) => {
+            this.queue.push([request, resolve, reject]);
             this.try_process();
         });
     }
@@ -335,9 +335,15 @@ class Fetcher {
             if (rr === undefined) {
                 break;
             }
-            const [request, resolve] = rr;
+            const [request, resolve, reject] = rr;
             const startTime = Date.now();
-            resolve(await fetch(request));
+            try {
+                resolve(await fetch(request));
+            } catch (e) {
+                // 单次请求失败只影响该请求本身,不能让队列卡死
+                // (否则后续所有 dispatch 会永久挂起,同步流程无限转圈)
+                reject(e);
+            }
             const elapsedTime = Date.now() - startTime;
             if (elapsedTime < this.waitTime) {
                 await new Promise((r) => setTimeout(r, this.waitTime - elapsedTime));

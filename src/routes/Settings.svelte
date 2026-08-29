@@ -6,6 +6,7 @@
 		shouldCleanCircleParentheses: boolean;
 		allowAllSpaceInCreatorName: boolean;
 		shouldAutofillArrangment: boolean;
+		useOriginalInstrumentFormat: boolean;
 		defaultOpenBGMNewAfterPack: boolean;
 		defaultFullPatch: boolean;
 	}
@@ -33,6 +34,7 @@
 		shouldCleanCircleParentheses: true,
 		allowAllSpaceInCreatorName: false,
 		shouldAutofillArrangment: true,
+		useOriginalInstrumentFormat: false,
 		defaultOpenBGMNewAfterPack: false,
 		defaultFullPatch: true
 	};
@@ -93,6 +95,11 @@
 		{
 			id: 'shouldAutofillArrangment',
 			text: '将作曲者视作未指定的编曲'
+		},
+		{
+			id: 'useOriginalInstrumentFormat',
+			text: '使用原版乐器职位构造方式',
+			hint: '原版功能构造格式：|乐器= 创作者1 (乐器1)、创作者2 (乐器2)'
 		}
 	];
 	const uiSettings = [

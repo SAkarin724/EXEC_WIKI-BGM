@@ -221,9 +221,16 @@ Compose／Jeet Singh<span class="text-bgm-pink">(Tr.1-4,8)</span>, Salita<span c
 		<section>
 			<h3 id="grammar-instrument">乐器标注</h3>
 			<p>
-				例如，下面的写法会在 infobox 中的「乐器」字段里填上 <code>JungMato (guitar)</code>
+				例如，下面的写法会在 infobox 中的「乐器」字段里按乐器分组填上
+				<code>Piano：Yuruto、Oharu / Guitar：yoss、Nekonyan</code>
 			</p>
-			<pre><span class="text-bgm-pink">乐器-guitar</span>：JungMato</pre>
+			<pre><span class="text-bgm-pink">乐器-Piano</span>：Yuruto、Oharu
+<span class="text-bgm-pink">乐器-Guitar</span>：yoss、Nekonyan</pre>
+			<p>
+				当不同乐器的成员完全相同时会合并展示，如 <code>Piano &amp; Guitar：Yuruto</code>。
+				如需使用原工具的 <code>创作者1 (乐器1)、创作者2 (乐器2)</code> 构造方式，
+				可在设置 → 解析器里勾选「使用原版乐器职位构造方式」。
+			</p>
 		</section>
 		<section>
 			<h3 id="grammar-cv">CV 标注</h3>

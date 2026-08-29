@@ -161,6 +161,7 @@ export interface PostProcessOptions {
     shouldCleanCircleParentheses: boolean;
     allowAllSpaceInCreatorName: boolean;
     shouldAutofillArrangment: boolean;
+    useOriginalInstrumentFormat: boolean;
 }
 
 class PersonData {
@@ -185,10 +186,17 @@ export class Release {
     tracks: Track[][];
     name2character: Map<string, [string, string]>;
     relaMap: Map<string, Staff[]> = new Map();
-    constructor(credits?: Credits, tracks?: Track[][], name2character?: Map<string, [string, string]>) {
+    useOriginalInstrumentFormat: boolean = false;
+    constructor(
+        credits?: Credits,
+        tracks?: Track[][],
+        name2character?: Map<string, [string, string]>,
+        options?: PostProcessOptions
+    ) {
         this.credits = credits || {};
         this.tracks = tracks || [];
         this.name2character = name2character || new Map();
+        this.useOriginalInstrumentFormat = options?.useOriginalInstrumentFormat ?? false;
     }
     static async fromRawRelease(raw: RawRelease, options: PostProcessOptions): Promise<Release> {
         function _parseSongCredit(cfs: CreditField[], name2character: Map<string, [string, string]>) {
@@ -275,7 +283,7 @@ export class Release {
             pd.parts = p.map(s => Array.from(s).sort((a, b) => a - b));
         }));
 
-        const release = new Release(credits, all_tracks, name2character);
+        const release = new Release(credits, all_tracks, name2character, options);
         await release.assignRelaMap();
         // release.normalizeCustomRoles();
         return release;
@@ -340,14 +348,52 @@ export class Release {
         if (rs.every(([roleID, _]) => !roleID.startsWith("乐器-"))) {
             return rs;
         }
-        let insEntry = rs.find(([roleID, _]) => roleID === "乐器");
-        if (!insEntry) rs.push(insEntry = ["乐器", []]);
-        return rs.flatMap(([roleID, creators]) => {
-            if (!roleID.startsWith("乐器-")) return [[roleID, creators]];
-            const insName = roleID.slice(3);
-            insEntry![1].push(...creators.map(c => `${c} (${insName})`));
-            return [];
+        // Original construct format：|乐器= 创作者1 (乐器1)、创作者2 (乐器2)
+        if (this.useOriginalInstrumentFormat) {
+            let insEntry = rs.find(([roleID, _]) => roleID === "乐器");
+            if (!insEntry) rs.push(insEntry = ["乐器", []]);
+            return rs.flatMap(([roleID, creators]) => {
+                if (!roleID.startsWith("乐器-")) return [[roleID, creators]];
+                const insName = roleID.slice(3);
+                insEntry![1].push(...creators.map(c => `${c} (${insName})`));
+                return [];
+            });
+        }
+        // New construct format：乐器1 & 乐器2：A、B / 乐器3：C、D 
+        // if menber set identify, then merge to them
+        const insGroups: Map<string, string[]> = new Map();
+        const rest: [string, string[]][] = [];
+        let manual: string[] = [];
+        rs.forEach(([roleID, creators]) => {
+            if (roleID === "乐器") {
+                manual = creators;
+            } else if (roleID.startsWith("乐器-")) {
+                insGroups.set(roleID.slice(3), creators);
+            } else {
+                rest.push([roleID, creators]);
+            }
         });
+        const sig = (names: string[]) => [...names].sort().join('\u0000');
+        const merged: [string[], string[]][] = [];
+        const seen = new Set<string>();
+        for (const [insName, creators] of insGroups) {
+            if (seen.has(insName)) continue;
+            const s = sig(creators);
+            const names = [insName];
+            for (const [insName2, creators2] of insGroups) {
+                if (insName2 === insName || seen.has(insName2)) continue;
+                if (sig(creators2) === s) {
+                    names.push(insName2);
+                    seen.add(insName2);
+                }
+            }
+            seen.add(insName);
+            merged.push([names, creators]);
+        }
+        const groups: string[] = [];
+        if (manual.length > 0) groups.push(`乐器：${manual.join('、')}`);
+        merged.forEach(([names, creators]) => groups.push(`${names.join(' & ')}：${creators.join('、')}`));
+        return [...rest, ["乐器", [groups.join(' / ')]]];
     }
 
     /**

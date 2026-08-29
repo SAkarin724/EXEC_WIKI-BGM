@@ -111,7 +111,7 @@
 		{
 			id: 'defaultFullPatch',
 			text: '默认将打包写入全量Patch',
-			hint: '关闭后打包默认写入符合条件（selective）的 Patch'
+			hint: '默认所有已填职位都会写入Patch，关闭后打包只写入没有人物关联的 Patch'
 		}
 	];
 

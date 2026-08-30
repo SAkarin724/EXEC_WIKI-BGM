@@ -65,6 +65,8 @@ export const ROLE_MAP: { [name: string]: Role[] } = {
     'label': [Role.RL],
     'circle': [Role.RL],
     'producer': [Role.PD],
+    'produced': [Role.PD],
+    'produced by': [Role.PD],
     'recording': [Role.RC],
     'recording studio': [Role.RC],
     'recording studios': [Role.RC],

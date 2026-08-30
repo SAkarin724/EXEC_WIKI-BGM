@@ -419,6 +419,10 @@
             "named": false
           },
           {
+            "type": "Produced",
+            "named": false
+          },
+          {
             "type": "Producer",
             "named": false
           },
@@ -848,6 +852,14 @@
           },
           {
             "type": "performer",
+            "named": false
+          },
+          {
+            "type": "produced",
+            "named": false
+          },
+          {
+            "type": "produced by",
             "named": false
           },
           {
@@ -1618,6 +1630,10 @@
     "named": false
   },
   {
+    "type": "Produced",
+    "named": false
+  },
+  {
     "type": "Producer",
     "named": false
   },
@@ -2063,6 +2079,14 @@
   },
   {
     "type": "performer",
+    "named": false
+  },
+  {
+    "type": "produced",
+    "named": false
+  },
+  {
+    "type": "produced by",
     "named": false
   },
   {

@@ -95,6 +95,14 @@
             "named": false
           },
           {
+            "type": "Arranged By",
+            "named": false
+          },
+          {
+            "type": "Arranged by",
+            "named": false
+          },
+          {
             "type": "Arrangement",
             "named": false
           },
@@ -120,6 +128,14 @@
           },
           {
             "type": "Composed",
+            "named": false
+          },
+          {
+            "type": "Composed By",
+            "named": false
+          },
+          {
+            "type": "Composed by",
             "named": false
           },
           {
@@ -207,7 +223,79 @@
             "named": false
           },
           {
+            "type": "Mastered At",
+            "named": false
+          },
+          {
+            "type": "Mastered Engineer",
+            "named": false
+          },
+          {
+            "type": "Mastered Engineers",
+            "named": false
+          },
+          {
+            "type": "Mastered Studio",
+            "named": false
+          },
+          {
+            "type": "Mastered Studios",
+            "named": false
+          },
+          {
+            "type": "Mastered at",
+            "named": false
+          },
+          {
+            "type": "Mastered engineer",
+            "named": false
+          },
+          {
+            "type": "Mastered engineers",
+            "named": false
+          },
+          {
+            "type": "Mastered studio",
+            "named": false
+          },
+          {
+            "type": "Mastered studios",
+            "named": false
+          },
+          {
             "type": "Mastering",
+            "named": false
+          },
+          {
+            "type": "Mastering Engineer",
+            "named": false
+          },
+          {
+            "type": "Mastering Engineers",
+            "named": false
+          },
+          {
+            "type": "Mastering Studio",
+            "named": false
+          },
+          {
+            "type": "Mastering Studios",
+            "named": false
+          },
+          {
+            "type": "Mastering engineer",
+            "named": false
+          },
+          {
+            "type": "Mastering engineers",
+            "named": false
+          },
+          {
+            "type": "Mastering studio",
+            "named": false
+          },
+          {
+            "type": "Mastering studios",
             "named": false
           },
           {
@@ -215,7 +303,95 @@
             "named": false
           },
           {
+            "type": "Mixed At",
+            "named": false
+          },
+          {
+            "type": "Mixed By",
+            "named": false
+          },
+          {
+            "type": "Mixed Engineer",
+            "named": false
+          },
+          {
+            "type": "Mixed Engineers",
+            "named": false
+          },
+          {
+            "type": "Mixed In",
+            "named": false
+          },
+          {
+            "type": "Mixed Studio",
+            "named": false
+          },
+          {
+            "type": "Mixed Studios",
+            "named": false
+          },
+          {
+            "type": "Mixed at",
+            "named": false
+          },
+          {
+            "type": "Mixed by",
+            "named": false
+          },
+          {
+            "type": "Mixed engineer",
+            "named": false
+          },
+          {
+            "type": "Mixed engineers",
+            "named": false
+          },
+          {
+            "type": "Mixed in",
+            "named": false
+          },
+          {
+            "type": "Mixed studio",
+            "named": false
+          },
+          {
+            "type": "Mixed studios",
+            "named": false
+          },
+          {
             "type": "Mixing",
+            "named": false
+          },
+          {
+            "type": "Mixing Engineer",
+            "named": false
+          },
+          {
+            "type": "Mixing Engineers",
+            "named": false
+          },
+          {
+            "type": "Mixing Studio",
+            "named": false
+          },
+          {
+            "type": "Mixing Studios",
+            "named": false
+          },
+          {
+            "type": "Mixing engineer",
+            "named": false
+          },
+          {
+            "type": "Mixing engineers",
+            "named": false
+          },
+          {
+            "type": "Mixing studio",
+            "named": false
+          },
+          {
+            "type": "Mixing studios",
             "named": false
           },
           {
@@ -251,7 +427,95 @@
             "named": false
           },
           {
+            "type": "Recorded At",
+            "named": false
+          },
+          {
+            "type": "Recorded By",
+            "named": false
+          },
+          {
+            "type": "Recorded Engineer",
+            "named": false
+          },
+          {
+            "type": "Recorded Engineers",
+            "named": false
+          },
+          {
+            "type": "Recorded In",
+            "named": false
+          },
+          {
+            "type": "Recorded Studio",
+            "named": false
+          },
+          {
+            "type": "Recorded Studios",
+            "named": false
+          },
+          {
+            "type": "Recorded at",
+            "named": false
+          },
+          {
+            "type": "Recorded by",
+            "named": false
+          },
+          {
+            "type": "Recorded engineer",
+            "named": false
+          },
+          {
+            "type": "Recorded engineers",
+            "named": false
+          },
+          {
+            "type": "Recorded in",
+            "named": false
+          },
+          {
+            "type": "Recorded studio",
+            "named": false
+          },
+          {
+            "type": "Recorded studios",
+            "named": false
+          },
+          {
             "type": "Recording",
+            "named": false
+          },
+          {
+            "type": "Recording Engineer",
+            "named": false
+          },
+          {
+            "type": "Recording Engineers",
+            "named": false
+          },
+          {
+            "type": "Recording Studio",
+            "named": false
+          },
+          {
+            "type": "Recording Studios",
+            "named": false
+          },
+          {
+            "type": "Recording engineer",
+            "named": false
+          },
+          {
+            "type": "Recording engineers",
+            "named": false
+          },
+          {
+            "type": "Recording studio",
+            "named": false
+          },
+          {
+            "type": "Recording studios",
             "named": false
           },
           {
@@ -363,6 +627,10 @@
             "named": false
           },
           {
+            "type": "arranged by",
+            "named": false
+          },
+          {
             "type": "arrangement",
             "named": false
           },
@@ -388,6 +656,10 @@
           },
           {
             "type": "composed",
+            "named": false
+          },
+          {
+            "type": "composed by",
             "named": false
           },
           {
@@ -463,7 +735,43 @@
             "named": false
           },
           {
+            "type": "mastered at",
+            "named": false
+          },
+          {
+            "type": "mastered engineer",
+            "named": false
+          },
+          {
+            "type": "mastered engineers",
+            "named": false
+          },
+          {
+            "type": "mastered studio",
+            "named": false
+          },
+          {
+            "type": "mastered studios",
+            "named": false
+          },
+          {
             "type": "mastering",
+            "named": false
+          },
+          {
+            "type": "mastering engineer",
+            "named": false
+          },
+          {
+            "type": "mastering engineers",
+            "named": false
+          },
+          {
+            "type": "mastering studio",
+            "named": false
+          },
+          {
+            "type": "mastering studios",
             "named": false
           },
           {
@@ -471,7 +779,51 @@
             "named": false
           },
           {
+            "type": "mixed at",
+            "named": false
+          },
+          {
+            "type": "mixed by",
+            "named": false
+          },
+          {
+            "type": "mixed engineer",
+            "named": false
+          },
+          {
+            "type": "mixed engineers",
+            "named": false
+          },
+          {
+            "type": "mixed in",
+            "named": false
+          },
+          {
+            "type": "mixed studio",
+            "named": false
+          },
+          {
+            "type": "mixed studios",
+            "named": false
+          },
+          {
             "type": "mixing",
+            "named": false
+          },
+          {
+            "type": "mixing engineer",
+            "named": false
+          },
+          {
+            "type": "mixing engineers",
+            "named": false
+          },
+          {
+            "type": "mixing studio",
+            "named": false
+          },
+          {
+            "type": "mixing studios",
             "named": false
           },
           {
@@ -507,7 +859,51 @@
             "named": false
           },
           {
+            "type": "recorded at",
+            "named": false
+          },
+          {
+            "type": "recorded by",
+            "named": false
+          },
+          {
+            "type": "recorded engineer",
+            "named": false
+          },
+          {
+            "type": "recorded engineers",
+            "named": false
+          },
+          {
+            "type": "recorded in",
+            "named": false
+          },
+          {
+            "type": "recorded studio",
+            "named": false
+          },
+          {
+            "type": "recorded studios",
+            "named": false
+          },
+          {
             "type": "recording",
+            "named": false
+          },
+          {
+            "type": "recording engineer",
+            "named": false
+          },
+          {
+            "type": "recording engineers",
+            "named": false
+          },
+          {
+            "type": "recording studio",
+            "named": false
+          },
+          {
+            "type": "recording studios",
             "named": false
           },
           {
@@ -894,6 +1290,14 @@
     "named": false
   },
   {
+    "type": "Arranged By",
+    "named": false
+  },
+  {
+    "type": "Arranged by",
+    "named": false
+  },
+  {
     "type": "Arrangement",
     "named": false
   },
@@ -919,6 +1323,14 @@
   },
   {
     "type": "Composed",
+    "named": false
+  },
+  {
+    "type": "Composed By",
+    "named": false
+  },
+  {
+    "type": "Composed by",
     "named": false
   },
   {
@@ -1010,7 +1422,79 @@
     "named": false
   },
   {
+    "type": "Mastered At",
+    "named": false
+  },
+  {
+    "type": "Mastered Engineer",
+    "named": false
+  },
+  {
+    "type": "Mastered Engineers",
+    "named": false
+  },
+  {
+    "type": "Mastered Studio",
+    "named": false
+  },
+  {
+    "type": "Mastered Studios",
+    "named": false
+  },
+  {
+    "type": "Mastered at",
+    "named": false
+  },
+  {
+    "type": "Mastered engineer",
+    "named": false
+  },
+  {
+    "type": "Mastered engineers",
+    "named": false
+  },
+  {
+    "type": "Mastered studio",
+    "named": false
+  },
+  {
+    "type": "Mastered studios",
+    "named": false
+  },
+  {
     "type": "Mastering",
+    "named": false
+  },
+  {
+    "type": "Mastering Engineer",
+    "named": false
+  },
+  {
+    "type": "Mastering Engineers",
+    "named": false
+  },
+  {
+    "type": "Mastering Studio",
+    "named": false
+  },
+  {
+    "type": "Mastering Studios",
+    "named": false
+  },
+  {
+    "type": "Mastering engineer",
+    "named": false
+  },
+  {
+    "type": "Mastering engineers",
+    "named": false
+  },
+  {
+    "type": "Mastering studio",
+    "named": false
+  },
+  {
+    "type": "Mastering studios",
     "named": false
   },
   {
@@ -1018,7 +1502,95 @@
     "named": false
   },
   {
+    "type": "Mixed At",
+    "named": false
+  },
+  {
+    "type": "Mixed By",
+    "named": false
+  },
+  {
+    "type": "Mixed Engineer",
+    "named": false
+  },
+  {
+    "type": "Mixed Engineers",
+    "named": false
+  },
+  {
+    "type": "Mixed In",
+    "named": false
+  },
+  {
+    "type": "Mixed Studio",
+    "named": false
+  },
+  {
+    "type": "Mixed Studios",
+    "named": false
+  },
+  {
+    "type": "Mixed at",
+    "named": false
+  },
+  {
+    "type": "Mixed by",
+    "named": false
+  },
+  {
+    "type": "Mixed engineer",
+    "named": false
+  },
+  {
+    "type": "Mixed engineers",
+    "named": false
+  },
+  {
+    "type": "Mixed in",
+    "named": false
+  },
+  {
+    "type": "Mixed studio",
+    "named": false
+  },
+  {
+    "type": "Mixed studios",
+    "named": false
+  },
+  {
     "type": "Mixing",
+    "named": false
+  },
+  {
+    "type": "Mixing Engineer",
+    "named": false
+  },
+  {
+    "type": "Mixing Engineers",
+    "named": false
+  },
+  {
+    "type": "Mixing Studio",
+    "named": false
+  },
+  {
+    "type": "Mixing Studios",
+    "named": false
+  },
+  {
+    "type": "Mixing engineer",
+    "named": false
+  },
+  {
+    "type": "Mixing engineers",
+    "named": false
+  },
+  {
+    "type": "Mixing studio",
+    "named": false
+  },
+  {
+    "type": "Mixing studios",
     "named": false
   },
   {
@@ -1054,7 +1626,95 @@
     "named": false
   },
   {
+    "type": "Recorded At",
+    "named": false
+  },
+  {
+    "type": "Recorded By",
+    "named": false
+  },
+  {
+    "type": "Recorded Engineer",
+    "named": false
+  },
+  {
+    "type": "Recorded Engineers",
+    "named": false
+  },
+  {
+    "type": "Recorded In",
+    "named": false
+  },
+  {
+    "type": "Recorded Studio",
+    "named": false
+  },
+  {
+    "type": "Recorded Studios",
+    "named": false
+  },
+  {
+    "type": "Recorded at",
+    "named": false
+  },
+  {
+    "type": "Recorded by",
+    "named": false
+  },
+  {
+    "type": "Recorded engineer",
+    "named": false
+  },
+  {
+    "type": "Recorded engineers",
+    "named": false
+  },
+  {
+    "type": "Recorded in",
+    "named": false
+  },
+  {
+    "type": "Recorded studio",
+    "named": false
+  },
+  {
+    "type": "Recorded studios",
+    "named": false
+  },
+  {
     "type": "Recording",
+    "named": false
+  },
+  {
+    "type": "Recording Engineer",
+    "named": false
+  },
+  {
+    "type": "Recording Engineers",
+    "named": false
+  },
+  {
+    "type": "Recording Studio",
+    "named": false
+  },
+  {
+    "type": "Recording Studios",
+    "named": false
+  },
+  {
+    "type": "Recording engineer",
+    "named": false
+  },
+  {
+    "type": "Recording engineers",
+    "named": false
+  },
+  {
+    "type": "Recording studio",
+    "named": false
+  },
+  {
+    "type": "Recording studios",
     "named": false
   },
   {
@@ -1166,6 +1826,10 @@
     "named": false
   },
   {
+    "type": "arranged by",
+    "named": false
+  },
+  {
     "type": "arrangement",
     "named": false
   },
@@ -1195,6 +1859,10 @@
   },
   {
     "type": "composed",
+    "named": false
+  },
+  {
+    "type": "composed by",
     "named": false
   },
   {
@@ -1278,7 +1946,43 @@
     "named": false
   },
   {
+    "type": "mastered at",
+    "named": false
+  },
+  {
+    "type": "mastered engineer",
+    "named": false
+  },
+  {
+    "type": "mastered engineers",
+    "named": false
+  },
+  {
+    "type": "mastered studio",
+    "named": false
+  },
+  {
+    "type": "mastered studios",
+    "named": false
+  },
+  {
     "type": "mastering",
+    "named": false
+  },
+  {
+    "type": "mastering engineer",
+    "named": false
+  },
+  {
+    "type": "mastering engineers",
+    "named": false
+  },
+  {
+    "type": "mastering studio",
+    "named": false
+  },
+  {
+    "type": "mastering studios",
     "named": false
   },
   {
@@ -1286,7 +1990,51 @@
     "named": false
   },
   {
+    "type": "mixed at",
+    "named": false
+  },
+  {
+    "type": "mixed by",
+    "named": false
+  },
+  {
+    "type": "mixed engineer",
+    "named": false
+  },
+  {
+    "type": "mixed engineers",
+    "named": false
+  },
+  {
+    "type": "mixed in",
+    "named": false
+  },
+  {
+    "type": "mixed studio",
+    "named": false
+  },
+  {
+    "type": "mixed studios",
+    "named": false
+  },
+  {
     "type": "mixing",
+    "named": false
+  },
+  {
+    "type": "mixing engineer",
+    "named": false
+  },
+  {
+    "type": "mixing engineers",
+    "named": false
+  },
+  {
+    "type": "mixing studio",
+    "named": false
+  },
+  {
+    "type": "mixing studios",
     "named": false
   },
   {
@@ -1326,7 +2074,51 @@
     "named": false
   },
   {
+    "type": "recorded at",
+    "named": false
+  },
+  {
+    "type": "recorded by",
+    "named": false
+  },
+  {
+    "type": "recorded engineer",
+    "named": false
+  },
+  {
+    "type": "recorded engineers",
+    "named": false
+  },
+  {
+    "type": "recorded in",
+    "named": false
+  },
+  {
+    "type": "recorded studio",
+    "named": false
+  },
+  {
+    "type": "recorded studios",
+    "named": false
+  },
+  {
     "type": "recording",
+    "named": false
+  },
+  {
+    "type": "recording engineer",
+    "named": false
+  },
+  {
+    "type": "recording engineers",
+    "named": false
+  },
+  {
+    "type": "recording studio",
+    "named": false
+  },
+  {
+    "type": "recording studios",
     "named": false
   },
   {

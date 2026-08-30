@@ -1,6 +1,6 @@
 <script lang="ts">
 	import 'uno.css';
-	import { SvelteMap } from 'svelte/reactivity';
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import { onMount, untrack } from 'svelte';
 
 	import TrackInfo from './TrackInfo.svelte';
@@ -41,7 +41,14 @@
 	let currentRelease: Readonly<Release> = $state.raw(new Release());
 	let dupResolution = $state(new SvelteMap<string, number>());
 	let dupResolutionEntries = $derived(Array.from(dupResolution.entries()));
-	let name2staff = $derived(resolveRelaMap(currentRelease.relaMap, dupResolutionEntries));
+	// Creators whose bgm relation was manually removed (clicked away in the Gallery).
+	// They are excluded from the resolved name2staff, so they no longer produce
+	// submit data / patch entries, while their names stay in the infobox text.
+	let removedRela = $state(new SvelteSet<string>());
+	let filteredRelaMap = $derived(
+		new Map(Array.from(currentRelease.relaMap.entries()).filter(([name]) => !removedRela.has(name)))
+	);
+	let name2staff = $derived(resolveRelaMap(filteredRelaMap, dupResolutionEntries));
 	// Display names of the custom roles currently synced into the infobox.
 	// Used so that deleting / renaming a custom role only removes its own row
 	// from the infobox while preserving every other (manually added) field.
@@ -60,6 +67,7 @@
 		);
 		setState();
 		dupResolution.clear();
+		removedRela.clear();
 		setTimeout(() => {
 			toast(`<b>嗯……？</b><br/>${getRandomTip()}`, { duration: 8000 });
 		}, 400);
@@ -99,7 +107,7 @@
 			// Ported from the userscript's `patchExportedJsonString`: attach the
 			// computed patch + policy so the clipboard JSON can be applied directly.
 			const useFullPatch = settingsState.val.defaultFullPatch;
-			const { patchText } = buildSelectivePatch(currentRelease, name2staff, useFullPatch);
+			const { patchText } = buildSelectivePatch(currentRelease, name2staff, useFullPatch, removedRela);
 			if (patchText) {
 				data.patch = patchText;
 				data.patchPolicy = useFullPatch ? 'full' : 'selective';
@@ -118,7 +126,7 @@
 	// Release, ported from the "Staff Tag Fix" userscript.
 	// Hold Alt to copy the selective rela table (submit data) instead of the text.
 	async function copyPatch() {
-		const { relaData, patchText } = buildSelectivePatch(currentRelease, name2staff, useShiftOnCopy);
+		const { relaData, patchText } = buildSelectivePatch(currentRelease, name2staff, useShiftOnCopy, removedRela);
 		if (useAltOnCopy) {
 			if (!relaData.length) {
 				toast('当前没有符合条件的关联', { alert: true });
@@ -301,7 +309,13 @@
 	}}
 />
 <Header edgefade>
-	<Gallery relaMap={currentRelease.relaMap} bind:dupResolution bind:showRelaDB class="h-35" />
+	<Gallery
+		relaMap={currentRelease.relaMap}
+		bind:dupResolution
+		bind:removedRela
+		bind:showRelaDB
+		class="h-35"
+	/>
 </Header>
 <main class="w-310 max-w-[95vw] lt-lg:w-200 lt-md:w-150 mx-auto my-4">
 	<div class="flex flex-justify-between gap-5">

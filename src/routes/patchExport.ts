@@ -74,7 +74,8 @@ function shouldExport(
 export function buildSelectivePatch(
     release: Readonly<Release>,
     name2staff: ResolvedRelaMap,
-    full = false
+    full = false,
+    removedRela?: ReadonlySet<string>
 ): { relaData: SubjectRelaPerson[]; patchText: string } {
     const aliasIndex = buildAliasIndex(name2staff);
     const isMultiDisc = release.tracks.length > 1;
@@ -83,6 +84,7 @@ export function buildSelectivePatch(
     const kept: [string, { name: string; parts: number[][] }][] = [];
     Object.entries(release.credits).forEach(([roleID, creators]) => {
         Object.entries(creators).forEach(([name, pd]: [string, NameData]) => {
+            if (removedRela?.has(name)) return;
             if (!full && !shouldExport(roleID, name, name2staff, aliasIndex)) return;
             kept.push([roleID, { name, parts: pd.parts }]);
         });
@@ -105,7 +107,7 @@ function buildRelaData(
     const r = new Map<number, Map<string, string>>(); // staff.id -> relation -> eps
     const staffName = new Map<number, string>(); // staff.id -> primary display name
     for (const [roleID, { name, parts }] of kept) {
-        const staff = name2staff.get(name)![0];
+        const staff = name2staff.get(name)?.[0];
         if (!staff) continue; // skip unmatched for submit data
         let relation = roleID.startsWith("乐器-") ? "乐器" : roleID;
         if (relation.startsWith("custom-")) continue; // custom roles are not in BGM rela

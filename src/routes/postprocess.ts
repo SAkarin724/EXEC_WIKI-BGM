@@ -322,7 +322,7 @@ export class Release {
                 displayRoleName(roleID),  // convert Role name
                 Object.entries(creators)
                     .sort(([a, _], [b, __]) => fa[a] - fa[b])
-                    .map(([c, _]) => this.formatCreator(c, name2staff.get(c)![0]?.name))
+                    .map(([c, _]) => this.formatCreator(c, name2staff.get(c)?.[0]?.name))
             ] as [string, string[]];
         });
         const rsc = this.coalesceInstrumentalRoles(rs);
@@ -405,7 +405,7 @@ export class Release {
         Object.entries(this.credits).forEach(([roleID, creators]) => {
             if (roleID.startsWith("乐器-")) roleID = "乐器";
             Object.entries(creators).forEach(([creator, pd]) => {
-                const staff = name2staff.get(creator)![0];
+                const staff = name2staff.get(creator)?.[0];
                 if (!staff) return;
                 const rtm = r.get(staff.id) ?? new Map<string, number[][]>();
                 let parts = pd.parts;

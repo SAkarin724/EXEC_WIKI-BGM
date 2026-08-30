@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
-	import { SvelteMap } from 'svelte/reactivity';
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import { type Staff } from '$lib/db';
 	import { resolveRelaMap, Match } from './disambiguation';
 	import { tooltip } from '$lib/Tooltip.svelte';
@@ -8,12 +8,14 @@
 	interface GalleryProps {
 		relaMap: Map<string, Staff[]>;
 		dupResolution: SvelteMap<string, number>;
+		removedRela: SvelteSet<string>;
 		showRelaDB: boolean;
 		class?: string;
 	}
 	let {
 		relaMap,
 		dupResolution = $bindable(),
+		removedRela = $bindable(),
 		showRelaDB = $bindable(),
 		class: class_ = ''
 	}: GalleryProps = $props();
@@ -21,6 +23,10 @@
 
 	let relaEntries = $derived(
 		Array.from(relaMap.keys()).map((name) => {
+			if (removedRela.has(name)) {
+				const firstCodepoint = name[Symbol.iterator]().next().value ?? '';
+				return { name, m: 'removed', pfp: placeHolderSVG(firstCodepoint) };
+			}
 			const [staff, m] = name2staff.get(name)!;
 			if (m === Match.None) {
 				const firstCodepoint = name[Symbol.iterator]().next().value ?? '';
@@ -74,41 +80,62 @@
 >
 	{#each relaEntries as { name, m, pfp } (name)}
 		{@const title =
-			m === Match.None ? `搜索「${name}」` : m !== Match.OK ? `「${name}」，有重名` : name}
+			m === 'removed'
+				? `「${name}」，已去除关联`
+				: m === Match.None
+					? `搜索「${name}」`
+					: m !== Match.OK
+						? `「${name}」，有重名`
+						: name}
 		<div class="static">
 			<button
 				aria-label={title}
 				class={'p-0 border-none bg-transparent text-size-base ' +
-					(m === Match.None ? 'cursor-copy' : m !== Match.OK ? 'cursor-context-menu' : '')}
+					(m === Match.None
+						? 'cursor-copy'
+						: m !== Match.OK
+							? 'cursor-context-menu'
+							: 'cursor-pointer')}
 				onclick={m === Match.None
 					? () => callSearch(name)
-					: m !== Match.OK
-						? (ev) => {
-								currentDisambiguation = currentDisambiguation === name ? undefined : name;
-								const pos = (ev.target as HTMLElement).getBoundingClientRect();
-								menuTop = pos.bottom + 5;
-								menuRight = window.innerWidth - pos.right - 7;
-							}
-						: undefined}
+					: (ev) => {
+							currentDisambiguation = currentDisambiguation === name ? undefined : name;
+							const pos = (ev.target as HTMLElement).getBoundingClientRect();
+							menuTop = pos.bottom + 5;
+							menuRight = window.innerWidth - pos.right - 7;
+						}}
 			>
 				<img
 					src={pfp}
 					alt={name}
 					use:tooltip={{ attachment: 'bottom', title }}
 					class={'execwb-prevent-click-outside rounded-xl w-13 h-13 mx-1.2 my-0.8 object-cover ' +
-						(m !== Match.OK ? 'drop-shadow-color-bgm-pink ' : ' ') +
+						(m !== Match.OK && m !== 'removed' ? 'drop-shadow-color-bgm-pink ' : ' ') +
 						(m === Match.Conflict || m === Match.ConflictResolved
 							? 'drop-shadow-md'
 							: 'drop-shadow-sm')}
 				/>
 			</button>
-			<!-- 去重菜单 -->
+			<!-- 关联菜单：去除关联（上方） / 选择人物 -->
 			{#if currentDisambiguation === name}
 				<div
 					class="absolute z-1 bg-faint-orangish/75 rounded-lg backdrop-blur-md shadow-lg"
 					transition:slide={{ duration: 200 }}
 					style="top: {menuTop}px; right: {menuRight}px;"
 				>
+					{#if m !== 'removed'}
+						<div class="p-2 border-b border-[#ffffff66]">
+							<button
+								class="w-full text-center border-none bg-transparent cursor-pointer text-sm text-red-600 hover:text-red-800 px-3 py-1"
+								onclick={() => {
+									removedRela.add(name);
+									currentDisambiguation = undefined;
+								}}
+							>
+								去除关联
+							</button>
+						</div>
+					{/if}
 					{#each relaMap.get(name)! as staff, i}
 						<div class="p-2">
 							<div class="flex items-center flex-justify-end">
@@ -122,6 +149,7 @@
 									aria-label={staff.name}
 									class="p-0 border-none bg-transparent cursor-pointer"
 									onclick={() => {
+										removedRela.delete(name);
 										dupResolution.set(name, i);
 										currentDisambiguation = undefined;
 									}}

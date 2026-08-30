@@ -38,7 +38,8 @@
 		character?: { name: string; cvMarker: string };
 	}
 	function representName(name: string): NameInfo {
-		const [staff, m] = name2staff.get(name)!;
+		const match = name2staff.get(name);
+		const [staff, m] = match ?? [undefined, Match.None];
 		const r: NameInfo = { name, isConflict: m === Match.Conflict };
 		if (m !== Match.None && m !== Match.Conflict) {
 			r.link = { id: staff.id, name: staff.name };

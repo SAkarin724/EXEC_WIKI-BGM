@@ -94,7 +94,7 @@ export function fromFormalRelease(rf: Readonly<FormalRelease>, name2staff?: Reso
     if (name2staff) { // only include matched credits
         pushCredit = (credit: Credits, role: string, name: string) => {
             credit[role] = credit[role] ?? [];
-            const staff = name2staff.get(name)![0];
+            const staff = name2staff.get(name)?.[0];
             if (!staff) return;
             credit[role].push(staff.name);
         }

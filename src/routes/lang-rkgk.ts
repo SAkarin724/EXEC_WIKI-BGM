@@ -39,6 +39,7 @@ const TYPE_COMPLETIONS = [
     { displayLabel: "厂牌", label: "changpai" },
     { displayLabel: "脚本", label: "jiaoben" },
     { displayLabel: "插图", label: "chatu" },
+    { displayLabel: "插图-", label: "chatu-" },
     { displayLabel: "制作人", label: "zhizuoren" },
     { displayLabel: "出版方", label: "chubanfang" },
     { displayLabel: "录音", label: "luyin" },
@@ -55,6 +56,7 @@ const TYPE_COMPLETIONS = [
     { displayLabel: "人声指导", label: "renshengzhidao" },
     { displayLabel: "音响监督", label: "yinxiangjiandu" },
     { displayLabel: "设计", label: "sheji" },
+    { displayLabel: "设计-", label: "sheji-" },
     { displayLabel: "客串", label: "kechuan" },
 ];
 

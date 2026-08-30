@@ -219,17 +219,21 @@ Compose／Jeet Singh<span class="text-bgm-pink">(Tr.1-4,8)</span>, Salita<span c
 法界之锅 <span class="text-bgm-grey">原曲：法界の火</span></pre>
 		</section>
 		<section>
-			<h3 id="grammar-instrument">乐器标注</h3>
+			<h3 id="grammar-instrument">拆分标注（乐器 / 设计 / 插图）</h3>
 			<p>
-				例如，下面的写法会在 infobox 中的「乐器」字段里按乐器分组填上
+				「乐器」「设计」「插图」都支持 <code>角色-子角色</code> 的拆分写法。 例如，下面的写法会在
+				infobox 中的「乐器」字段里按乐器分组填上
 				<code>Piano：Yuruto、Oharu / Guitar：yoss、Nekonyan</code>
 			</p>
 			<pre><span class="text-bgm-pink">乐器-Piano</span>：Yuruto、Oharu
 <span class="text-bgm-pink">乐器-Guitar</span>：yoss、Nekonyan</pre>
 			<p>
-				当不同乐器的成员完全相同时会合并展示，如 <code>Piano &amp; Guitar：Yuruto</code>。
-				如需使用原工具的 <code>创作者1 (乐器1)、创作者2 (乐器2)</code> 构造方式，
-				可在设置 → 解析器里勾选「使用原版乐器职位构造方式」。
+				「设计」「插图」同理，如 <code>设计-封面</code>、<code>插图-内页</code>，
+				会分别归入「设计」「插图」字段分组展示。
+			</p>
+			<p>
+				当同一角色的成员完全相同时会合并展示，如 <code>Piano &amp; Guitar：Yuruto</code>。
+				如需使用原工具的 <code>创作者1 (乐器1)、创作者2 (乐器2)</code> 构造方式， 可在设置 → 解析器里勾选「使用原版乐器职位构造方式」。
 			</p>
 		</section>
 		<section>

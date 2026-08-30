@@ -1,10 +1,10 @@
 /**
  * The ugly: the part of parsing that needs to be resolved at semantic level.
  */
-import { type RawRelease, RawTrack, type CreditField } from "./lang-rkgk";
-import { queryNameOrAliasBulk, type Staff } from "$lib/db";
-import { type ResolvedRelaMap } from "./disambiguation";
-import { parsePart } from "$lib/bangumiUtils";
+import { type RawRelease, RawTrack, type CreditField } from './lang-rkgk';
+import { queryNameOrAliasBulk, type Staff } from '$lib/db';
+import { type ResolvedRelaMap } from './disambiguation';
+import { parsePart } from '$lib/bangumiUtils';
 
 export enum Role {
     undef = "",
@@ -57,8 +57,8 @@ export const ROLE_MAP: { [name: string]: Role[] } = {
     'performer': [Role.V],
     'featured': [Role.FT],
     'featuring': [Role.FT],
-    'guest vocal': [Role.FT],
-    'jacket illustration': [Role.I],
+	'guest vocal': [Role.FT],
+	'jacket illustration': [Role.I],
     'illustration': [Role.I],
     'illustrator': [Role.I],
     'illust': [Role.I],
@@ -74,16 +74,16 @@ export const ROLE_MAP: { [name: string]: Role[] } = {
     'narration': [Role.NA],
     'narrations': [Role.NA],
     'storyteller': [Role.NA],
-    'vocal edit': [Role.VE],
-    'vocal edited': [Role.VE],
-    'vocal editor': [Role.VE],
-    'vocal edition': [Role.VE],
-    'vocal direct': [Role.VD],
-    'vocal direction': [Role.VD],
-    'vocal director': [Role.VD],
-    'sound direct': [Role.SD],
-    'sound direction': [Role.SD],
-    'sound director': [Role.SD],
+	'vocal edit': [Role.VE],
+	'vocal edited': [Role.VE],
+	'vocal editor': [Role.VE],
+	'vocal edition': [Role.VE],
+	'vocal direct': [Role.VD],
+	'vocal direction': [Role.VD],
+	'vocal director': [Role.VD],
+	'sound direct': [Role.SD],
+	'sound direction': [Role.SD],
+	'sound director': [Role.SD],
     'mixing': [Role.MX],
     'mixed': [Role.MX],
     'mastering': [Role.MA],
@@ -154,429 +154,455 @@ export const ROLE_MAP: { [name: string]: Role[] } = {
     '客串': [Role.FT]
 };
 
+export const RE_ROLE_KEYWORD = new RegExp(Object.keys(ROLE_MAP).join('|'), 'i');
 
-export const RE_ROLE_KEYWORD = new RegExp(Object.keys(ROLE_MAP).join("|"), "i");
+// Roles that support the "X-子角色" split syntax (e.g. 乐器-吉他). "设计" and
+// "插图" share the same construction rules as "乐器", e.g. 设计-封面 / 插图-内页.
+// Keep in sync with `_role_instrument` in grammar.js.
+export const PREFIXABLE_ROLES = ['乐器', '设计', '插图'] as const;
 
 export interface PostProcessOptions {
-    shouldCleanCircleParentheses: boolean;
-    allowAllSpaceInCreatorName: boolean;
-    shouldAutofillArrangment: boolean;
-    useOriginalInstrumentFormat: boolean;
+	shouldCleanCircleParentheses: boolean;
+	allowAllSpaceInCreatorName: boolean;
+	shouldAutofillArrangment: boolean;
+	useOriginalSplitRolesFormat: boolean;
 }
 
 class PersonData {
-    parts: number[][] = [];
+	parts: number[][] = [];
 }
 
 interface Credits {
-    [roleID: string]: {
-        [name: string]: PersonData;
-    }
+	[roleID: string]: {
+		[name: string]: PersonData;
+	};
 }
 
 interface CreditsText { [roleID: string]: string[]; } // { roleID: [name, ...] }
 
 export interface Track {
-    title: string;
-    comment: string;
+	title: string;
+	comment: string;
 }
 
 export class Release {
-    credits: Credits;
-    tracks: Track[][];
-    name2character: Map<string, [string, string]>;
-    relaMap: Map<string, Staff[]> = new Map();
-    useOriginalInstrumentFormat: boolean = false;
-    constructor(
-        credits?: Credits,
-        tracks?: Track[][],
-        name2character?: Map<string, [string, string]>,
-        options?: PostProcessOptions
-    ) {
-        this.credits = credits || {};
-        this.tracks = tracks || [];
-        this.name2character = name2character || new Map();
-        this.useOriginalInstrumentFormat = options?.useOriginalInstrumentFormat ?? false;
-    }
-    static async fromRawRelease(raw: RawRelease, options: PostProcessOptions): Promise<Release> {
-        function _parseSongCredit(cfs: CreditField[], name2character: Map<string, [string, string]>) {
+	credits: Credits;
+	tracks: Track[][];
+	name2character: Map<string, [string, string]>;
+	relaMap: Map<string, Staff[]> = new Map();
+	useOriginalSplitRolesFormat: boolean = false;
+	constructor(
+		credits?: Credits,
+		tracks?: Track[][],
+		name2character?: Map<string, [string, string]>,
+		options?: PostProcessOptions
+	) {
+		this.credits = credits || {};
+		this.tracks = tracks || [];
+		this.name2character = name2character || new Map();
+		this.useOriginalSplitRolesFormat = options?.useOriginalSplitRolesFormat ?? false;
+	}
+	static async fromRawRelease(raw: RawRelease, options: PostProcessOptions): Promise<Release> {
+		function _parseSongCredit(cfs: CreditField[], name2character: Map<string, [string, string]>) {
             return parseSongCredit(cfs,
-                name2character,
-                options.shouldCleanCircleParentheses,
+				name2character,
+				options.shouldCleanCircleParentheses,
                 options.allowAllSpaceInCreatorName,
-            );
-        }
+			);
+		}
 
-        const name2character = new Map<string, [string, string]>();
-        const credits = _parseSongCredit(raw.credits, name2character);
-        const all_tracks = raw.discs.map((disc, i) => {
-            // normalize track titles, then coalesce empty titles
+		const name2character = new Map<string, [string, string]>();
+		const credits = _parseSongCredit(raw.credits, name2character);
+		const all_tracks = raw.discs.map((disc, i) => {
+			// normalize track titles, then coalesce empty titles
             let trackTitles = disc.tracks.map(t => t.title);
-            if (trackTitles.length > 1) {
-                trackTitles = normalizeTitles(trackTitles);
-            }
-            let ct = new RawTrack();
-            const compactTracks = [ct];
-            disc.tracks.forEach((track, j) => {
-                ct.title = trackTitles[j];
-                ct.comment = track.comment;
-                ct.credits.push(...track.credits);
-                if (ct.title) {
+			if (trackTitles.length > 1) {
+				trackTitles = normalizeTitles(trackTitles);
+			}
+			let ct = new RawTrack();
+			const compactTracks = [ct];
+			disc.tracks.forEach((track, j) => {
+				ct.title = trackTitles[j];
+				ct.comment = track.comment;
+				ct.credits.push(...track.credits);
+				if (ct.title) {
                     compactTracks.push(ct = new RawTrack());
-                }
-            });
+				}
+			});
             if (compactTracks[compactTracks.length - 1].title === "") {
-                compactTracks.pop();
-            }
-            // extract credits
-            return compactTracks.map((rt, j) => {
-                const trackCredits = _parseSongCredit(rt.credits, name2character);
-                Object.entries(trackCredits).forEach(([roleID, creators]) => {
+				compactTracks.pop();
+			}
+			// extract credits
+			return compactTracks.map((rt, j) => {
+				const trackCredits = _parseSongCredit(rt.credits, name2character);
+				Object.entries(trackCredits).forEach(([roleID, creators]) => {
                     const rs = credits[roleID] = credits[roleID] || {};
-                    Object.entries(creators).forEach(([name, pd]) => {
+					Object.entries(creators).forEach(([name, pd]) => {
                         const pd0 = rs[name] = rs[name] || new PersonData();
-                        pd0.parts.push([i + 1, j + 1]);
-                    });
-                });
-                return {
-                    title: rt.title,
+						pd0.parts.push([i + 1, j + 1]);
+					});
+				});
+				return {
+					title: rt.title,
                     comment: rt.comment,
                 }
-            });
-        });
+			});
+		});
 
-        if (options.shouldAutofillArrangment && Role.C in credits) {
+		if (options.shouldAutofillArrangment && Role.C in credits) {
             const gather = (role: Role): [string[], string[][][]] => {  // plist0[], plist[disc-1][track-1][]
-                const plist0: string[] = [];
+				const plist0: string[] = [];
                 const plist: string[][][] = all_tracks.map(disc => Array.from({ length: disc.length }, () => []));
-                Object.entries(credits[role] ?? {}).forEach(([name, pd]) => {
-                    if (pd.parts.length === 0) {
-                        plist0.push(name);
-                    } else {
-                        pd.parts.forEach(([d, t]) => plist[d - 1]?.[t - 1]?.push(name));
-                    }
-                });
-                return [plist0, plist];
-            }
-            const [composers0, composers] = gather(Role.C);
-            const [arrangers0, arrangers] = gather(Role.A);
+				Object.entries(credits[role] ?? {}).forEach(([name, pd]) => {
+					if (pd.parts.length === 0) {
+						plist0.push(name);
+					} else {
+						pd.parts.forEach(([d, t]) => plist[d - 1]?.[t - 1]?.push(name));
+					}
+				});
+				return [plist0, plist];
+			};
+			const [composers0, composers] = gather(Role.C);
+			const [arrangers0, arrangers] = gather(Role.A);
             const creditA = credits[Role.A] = credits[Role.A] ?? {};
-            if (arrangers0.length === 0) {
+			if (arrangers0.length === 0) {
                 composers0.forEach(name => {
-                    creditA[name] = creditA[name] ?? new PersonData();
-                });
-            }
+					creditA[name] = creditA[name] ?? new PersonData();
+				});
+			}
             arrangers.forEach((disc, i) => disc.forEach((names, j) => {
-                if (names.length > 0) return;
+				if (names.length > 0) return;
                 composers[i][j].forEach(name => {
-                    creditA[name] = creditA[name] ?? new PersonData();
-                    creditA[name].parts.push([i + 1, j + 1]);
-                });
+					creditA[name] = creditA[name] ?? new PersonData();
+					creditA[name].parts.push([i + 1, j + 1]);
+				});
             }));
-        }
+		}
 
-        // convert parts from [disc, track][] to (track[])[disc-1]
+		// convert parts from [disc, track][] to (track[])[disc-1]
         Object.values(credits).forEach(creatorData => Object.values(creatorData).forEach(pd => {
-            if (pd.parts.length === 0) return; // empty parts means participation in all tracks
-            const p = Array.from({ length: all_tracks.length }, () => new Set<number>());
-            pd.parts.forEach(([d, t]) => p[d - 1]?.add(t) ?? console.warn(`Disc ${d} does not exist`));
+			if (pd.parts.length === 0) return; // empty parts means participation in all tracks
+			const p = Array.from({ length: all_tracks.length }, () => new Set<number>());
+			pd.parts.forEach(([d, t]) => p[d - 1]?.add(t) ?? console.warn(`Disc ${d} does not exist`));
             pd.parts = p.map(s => Array.from(s).sort((a, b) => a - b));
         }));
 
-        const release = new Release(credits, all_tracks, name2character, options);
-        await release.assignRelaMap();
-        // release.normalizeCustomRoles();
-        return release;
-    }
-    private async assignRelaMap() {
+		const release = new Release(credits, all_tracks, name2character, options);
+		await release.assignRelaMap();
+		// release.normalizeCustomRoles();
+		return release;
+	}
+	private async assignRelaMap() {
         const allCreators = Array.from(new Set<string>([
             ...Object.values(this.credits).flatMap(Object.keys),
         ]));
-        const qr = await queryNameOrAliasBulk(allCreators);
-        this.relaMap = new Map(allCreators.map((creator, i) => [creator, qr[i]]));
-    }
+		const qr = await queryNameOrAliasBulk(allCreators);
+		this.relaMap = new Map(allCreators.map((creator, i) => [creator, qr[i]]));
+	}
 
-    /**
-     * Group creators by roles.
-     * e.g. [["作曲", ["A", "B"]], ["作词", ["A", ...
-     */
-    intoRoleSummary(name2staff: ResolvedRelaMap): [string, string[]][] {
-        function firstAppear(p: number[][]): number {
-            if (p.length === 0) return -1;
+	/**
+	 * Group creators by roles.
+	 * e.g. [["作曲", ["A", "B"]], ["作词", ["A", ...
+	 */
+	intoRoleSummary(name2staff: ResolvedRelaMap): [string, string[]][] {
+		function firstAppear(p: number[][]): number {
+			if (p.length === 0) return -1;
             const disc = p.findIndex(x => x.length > 0);
-            if (disc === -1) return -1;
-            return 1000 * disc + p[disc][0];
-        }
+			if (disc === -1) return -1;
+			return 1000 * disc + p[disc][0];
+		}
 
-        // remove custom- prefix 
-        function displayRoleName(roleID: string): string {
-            if (roleID.startsWith('custom-')) {
-                return roleID.slice(7); 
-            }
-            return roleID;
-        }
+		// remove custom- prefix
+		function displayRoleName(roleID: string): string {
+			if (roleID.startsWith('custom-')) {
+				return roleID.slice(7);
+			}
+			return roleID;
+		}
 
-        const rs = Object.entries(this.credits).map(([roleID, creators]) => {
+		const rs = Object.entries(this.credits).map(([roleID, creators]) => {
             const fa = Object.fromEntries(Object.entries(creators).map(([c, { parts }]) => [c, firstAppear(parts)]));
-            return [
+			return [
                 displayRoleName(roleID),  // convert Role name
-                Object.entries(creators)
-                    .sort(([a, _], [b, __]) => fa[a] - fa[b])
-                    .map(([c, _]) => this.formatCreator(c, name2staff.get(c)?.[0]?.name))
-            ] as [string, string[]];
-        });
-        const rsc = this.coalesceInstrumentalRoles(rs);
+				Object.entries(creators)
+					.sort(([a, _], [b, __]) => fa[a] - fa[b])
+					.map(([c, _]) => this.formatCreator(c, name2staff.get(c)?.[0]?.name))
+			] as [string, string[]];
+		});
+		const rsc = this.coalesceInstrumentalRoles(rs);
         const emptyRoles = new Set<string>(Object.values(Role).slice(1))
-        rsc.forEach(([roleID, _]) => emptyRoles.delete(roleID));
+		rsc.forEach(([roleID, _]) => emptyRoles.delete(roleID));
         return rsc.concat(Array.from(emptyRoles).map(roleID => [roleID, []]));
-    }
+	}
 
-    formatCreator(name: string, primaryName: string | undefined): string {
-        let r = name;
-        if (primaryName && name !== primaryName) {
-            r = `${name} (${primaryName})`;
-        }
-        const character = this.name2character.get(name);
-        if (character) {
-            const [cvMarker, char] = character;
-            r = `${char}(CV${cvMarker}${r})`;
-        }
-        return r;
-    }
+	formatCreator(name: string, primaryName: string | undefined): string {
+		let r = name;
+		if (primaryName && name !== primaryName) {
+			r = `${name} (${primaryName})`;
+		}
+		const character = this.name2character.get(name);
+		if (character) {
+			const [cvMarker, char] = character;
+			r = `${char}(CV${cvMarker}${r})`;
+		}
+		return r;
+	}
 
-    private coalesceInstrumentalRoles(rs: [string, string[]][]): [string, string[]][] {
+	private coalesceInstrumentalRoles(rs: [string, string[]][]): [string, string[]][] {
         if (rs.every(([roleID, _]) => !roleID.startsWith("乐器-"))) {
-            return rs;
-        }
-        // Original construct format：|乐器= 创作者1 (乐器1)、创作者2 (乐器2)
-        if (this.useOriginalInstrumentFormat) {
-            let insEntry = rs.find(([roleID, _]) => roleID === "乐器");
-            if (!insEntry) rs.push(insEntry = ["乐器", []]);
-            return rs.flatMap(([roleID, creators]) => {
-                if (!roleID.startsWith("乐器-")) return [[roleID, creators]];
-                const insName = roleID.slice(3);
-                insEntry![1].push(...creators.map(c => `${c} (${insName})`));
-                return [];
-            });
-        }
-        // New construct format：乐器1 & 乐器2：A、B / 乐器3：C、D 
-        // if menber set identify, then merge to them
-        const insGroups: Map<string, string[]> = new Map();
-        const rest: [string, string[]][] = [];
-        let manual: string[] = [];
-        rs.forEach(([roleID, creators]) => {
-            if (roleID === "乐器") {
-                manual = creators;
-            } else if (roleID.startsWith("乐器-")) {
-                insGroups.set(roleID.slice(3), creators);
-            } else {
-                rest.push([roleID, creators]);
-            }
-        });
-        const sig = (names: string[]) => [...names].sort().join('\u0000');
-        const merged: [string[], string[]][] = [];
-        const seen = new Set<string>();
-        for (const [insName, creators] of insGroups) {
-            if (seen.has(insName)) continue;
-            const s = sig(creators);
-            const names = [insName];
-            for (const [insName2, creators2] of insGroups) {
-                if (insName2 === insName || seen.has(insName2)) continue;
-                if (sig(creators2) === s) {
-                    names.push(insName2);
-                    seen.add(insName2);
-                }
-            }
-            seen.add(insName);
-            merged.push([names, creators]);
-        }
-        const groups: string[] = [];
-        if (manual.length > 0) groups.push(`乐器：${manual.join('、')}`);
-        merged.forEach(([names, creators]) => groups.push(`${names.join(' & ')}：${creators.join('、')}`));
-        return [...rest, ["乐器", [groups.join(' / ')]]];
-    }
+			return rs;
+		}
+		// Original construct format：|乐器= 创作者1 (乐器1)、创作者2 (乐器2)
+		if (this.useOriginalSplitRolesFormat) {
+			const result = [...rs];
+			PREFIXABLE_ROLES.forEach((base) => {
+				if (!result.some(([roleID]) => roleID.startsWith(base + '-'))) return;
+				let entry = result.find(([roleID]) => roleID === base);
+				if (!entry) result.push((entry = [base, []]));
+				for (let i = result.length - 1; i >= 0; i--) {
+					const [roleID, creators] = result[i];
+					if (!roleID.startsWith(base + '-')) continue;
+					const subName = roleID.slice(base.length + 1);
+					entry[1].push(...creators.map((c) => `${c} (${subName})`));
+					result.splice(i, 1);
+				}
+			});
+			return result;
+		}
+		// New construct format：乐器1 & 乐器2：A、B / 乐器3：C、D
+		// if member sets are identical, merge them into one group
+		const rest: [string, string[]][] = [];
+		const byBase = PREFIXABLE_ROLES.map((base) => ({
+			base,
+			manual: [] as string[],
+			groups: new Map<string, string[]>()
+		}));
+		rs.forEach(([roleID, creators]) => {
+			const rec = byBase.find(({ base }) => roleID === base || roleID.startsWith(base + '-'));
+			if (!rec) {
+				rest.push([roleID, creators]);
+				return;
+			}
+			if (roleID === rec.base) {
+				rec.manual = creators;
+			} else {
+				rec.groups.set(roleID.slice(rec.base.length + 1), creators);
+			}
+		});
+		const sig = (names: string[]) => [...names].sort().join('\u0000');
+		const result: [string, string[]][] = [...rest];
+		byBase.forEach(({ base, manual, groups }) => {
+			if (manual.length === 0 && groups.size === 0) return;
+			// merge groups with identical member sets
+			const merged: [string[], string[]][] = [];
+			const seen = new Set<string>();
+			for (const [subName, creators] of groups) {
+				if (seen.has(subName)) continue;
+				const s = sig(creators);
+				const names = [subName];
+				for (const [subName2, creators2] of groups) {
+					if (subName2 === subName || seen.has(subName2)) continue;
+					if (sig(creators2) === s) {
+						names.push(subName2);
+						seen.add(subName2);
+					}
+				}
+				seen.add(subName);
+				merged.push([names, creators]);
+			}
+			const groupTexts: string[] = [];
+			if (manual.length > 0) groupTexts.push(manual.join('、'));
+			merged.forEach(([names, creators]) =>
+				groupTexts.push(`${names.join(' & ')}：${creators.join('、')}`)
+			);
+			result.push([base, [groupTexts.join(' / ')]]);
+		});
+		return result;
+	}
 
-    /**
-     * List creators (bgm_id) along with their role-track info.
-     * e.g. [[10042, [["作曲", "1,3"], ["作词", "2"]]], ...
-     */
-    intoCreatorSummary(name2staff: ResolvedRelaMap): [number, [string, string][]][] {
-        let r = new Map<number, Map<string, number[][]>>();  // staff_id -> { role -> tracks }
-        Object.entries(this.credits).forEach(([roleID, creators]) => {
-            if (roleID.startsWith("乐器-")) roleID = "乐器";
-            Object.entries(creators).forEach(([creator, pd]) => {
-                const staff = name2staff.get(creator)?.[0];
-                if (!staff) return;
-                const rtm = r.get(staff.id) ?? new Map<string, number[][]>();
-                let parts = pd.parts;
-                if (rtm.has(roleID)) { // in case of multiple alias, merge parts
-                    parts = rtm.get(roleID)!.map((a, i) => Array.from(new Set([...a, ...parts[i]])));
-                }
-                rtm.set(roleID, parts);
-                r.set(staff.id, rtm);
-            });
-        });
-        const isMultiDisc = this.tracks.length > 1;
-        return Array.from(r.entries())
-            .map(([staffID, rtm]) => {
-                const rts = Array.from(rtm.entries())
-                    .map(([roleID, tr]) => {
-                        if (tr.length === 0) return [roleID, ""];
-                        return [roleID, isMultiDisc ? multiDiscPageNoJoin(tr) : pagenoJoin(tr[0])];
-                    }) as [string, string][];
-                return [staffID, rts];
-            });
-    }
+	/**
+	 * List creators (bgm_id) along with their role-track info.
+	 * e.g. [[10042, [["作曲", "1,3"], ["作词", "2"]]], ...
+	 */
+	intoCreatorSummary(name2staff: ResolvedRelaMap): [number, [string, string][]][] {
+		let r = new Map<number, Map<string, number[][]>>(); // staff_id -> { role -> tracks }
+		Object.entries(this.credits).forEach(([roleID, creators]) => {
+			const pbase = PREFIXABLE_ROLES.find((base) => roleID.startsWith(base + '-'));
+			if (pbase) roleID = pbase;
+			Object.entries(creators).forEach(([creator, pd]) => {
+				const staff = name2staff.get(creator)?.[0];
+				if (!staff) return;
+				const rtm = r.get(staff.id) ?? new Map<string, number[][]>();
+				let parts = pd.parts;
+				if (rtm.has(roleID)) {
+					// in case of multiple alias, merge parts
+					parts = rtm.get(roleID)!.map((a, i) => Array.from(new Set([...a, ...parts[i]])));
+				}
+				rtm.set(roleID, parts);
+				r.set(staff.id, rtm);
+			});
+		});
+		const isMultiDisc = this.tracks.length > 1;
+		return Array.from(r.entries()).map(([staffID, rtm]) => {
+			const rts = Array.from(rtm.entries()).map(([roleID, tr]) => {
+				if (tr.length === 0) return [roleID, ''];
+				return [roleID, isMultiDisc ? multiDiscPageNoJoin(tr) : pagenoJoin(tr[0])];
+			}) as [string, string][];
+			return [staffID, rts];
+		});
+	}
 
-    /**
-     * List per-track creator info.
-     */
-    intoTrackSummary(): [CreditsText, CreditsText[][]] {
-        const r0: CreditsText = {};
+	/**
+	 * List per-track creator info.
+	 */
+	intoTrackSummary(): [CreditsText, CreditsText[][]] {
+		const r0: CreditsText = {};
         const r = this.tracks.map((disc) => Array.from({ length: disc.length }, () => ({} as CreditsText)));
-        Object.entries(this.credits).forEach(([roleID, creators]) => {
-            Object.entries(creators).forEach(([creator, pd]) => {
-                if (pd.parts.length === 0) {
-                    r0[roleID] = r0[roleID] || [];
-                    r0[roleID].push(creator);
-                    return;
-                }
+		Object.entries(this.credits).forEach(([roleID, creators]) => {
+			Object.entries(creators).forEach(([creator, pd]) => {
+				if (pd.parts.length === 0) {
+					r0[roleID] = r0[roleID] || [];
+					r0[roleID].push(creator);
+					return;
+				}
                 pd.parts.forEach((p, i) => p.forEach(j => {
-                    const rij = r[i]?.[j - 1];
-                    if (!rij) {
-                        console.warn(`Disc ${i + 1} track ${j} does not exist`);
-                        return;
-                    }
-                    rij[roleID] = rij[roleID] || [];
-                    rij[roleID].push(creator);
+						const rij = r[i]?.[j - 1];
+						if (!rij) {
+							console.warn(`Disc ${i + 1} track ${j} does not exist`);
+							return;
+						}
+						rij[roleID] = rij[roleID] || [];
+						rij[roleID].push(creator);
                 }));
-            });
-        });
-        return [r0, r];
-    }
+			});
+		});
+		return [r0, r];
+	}
 }
 
-
 function parseSongCredit(
-    cfs: CreditField[],
-    name2character: Map<string, [string, string]>,
-    trimCircle: boolean = true,
-    preserveAllSpace: boolean = false,
+	cfs: CreditField[],
+	name2character: Map<string, [string, string]>,
+	trimCircle: boolean = true,
+	preserveAllSpace: boolean = false
 ): Credits {
-    function testEdge(c0: CreditField, c2: CreditField): boolean {
+	function testEdge(c0: CreditField, c2: CreditField): boolean {
         if (c0.type !== "creator" || c2.type !== "creator") return false;
-        if (preserveAllSpace) return true;
-        return /[a-zA-Z]$/.test(c0.value) && /^[a-zA-Z]/.test(c2.value);
-    }
-    let cfs_ = [...cfs];
-    // merge creator fragments; remove creatorSeperator
-    for (let i = 0; i < cfs_.length; i++) {
+		if (preserveAllSpace) return true;
+		return /[a-zA-Z]$/.test(c0.value) && /^[a-zA-Z]/.test(c2.value);
+	}
+	let cfs_ = [...cfs];
+	// merge creator fragments; remove creatorSeperator
+	for (let i = 0; i < cfs_.length; i++) {
         if (cfs_[i].type !== "creatorSeparator") { continue; }
         if (i === 0) { cfs_.splice(0, 0, { type: "creator", value: "" }); i++; }
         else if (i === cfs_.length - 1) { cfs_.push({ type: "creator", value: "" }); }
-        if (/^\s+$/.test(cfs_[i].value) && testEdge(cfs_[i - 1], cfs_[i + 1])) {
+		if (/^\s+$/.test(cfs_[i].value) && testEdge(cfs_[i - 1], cfs_[i + 1])) {
             cfs_.splice(i - 1, 3, { type: "creator", value: `${cfs_[i - 1].value} ${cfs_[i + 1].value}`.trim() });
-            i--;
-        } else {
-            cfs_.splice(i, 1);
-        }
-    }
-    // extract characters from "character (CV: name)"
-    for (let i = 0; i < cfs_.length; i++) {
+			i--;
+		} else {
+			cfs_.splice(i, 1);
+		}
+	}
+	// extract characters from "character (CV: name)"
+	for (let i = 0; i < cfs_.length; i++) {
         if (cfs_[i].type !== "cv_conj") continue;
-        const cfv = cfs_[i].value;
-        if ([')', '）'].includes(cfv)) {
-            cfs_.splice(i, 1);
-            continue;
-        }
-        let cvMarker = ['|', '｜'].includes(cfv) ? ':' : cfv.trim().slice(-1);
-        if (cvMarker === '：') cvMarker = ':';
-        const [c0, c2] = [cfs_[i - 1], cfs_[i + 1]];
+		const cfv = cfs_[i].value;
+		if ([')', '）'].includes(cfv)) {
+			cfs_.splice(i, 1);
+			continue;
+		}
+		let cvMarker = ['|', '｜'].includes(cfv) ? ':' : cfv.trim().slice(-1);
+		if (cvMarker === '：') cvMarker = ':';
+		const [c0, c2] = [cfs_[i - 1], cfs_[i + 1]];
         if (c0?.type !== "creator" || c2?.type !== "creator") {
-            cfs_.splice(i, 1);
-            continue;
-        }
-        name2character.set(c2.value, [cvMarker, c0.value]);
-        cfs_.splice(i - 1, 2);
-        i--;
-    }
-    // assign creators to roles (and mental gymnastics for parts & CVs)
-    let credits: Credits = {};
-    let roleIDs = new Set<string>();
-    let lastPersonData: PersonData[] | null = null; // role: creator(parts), ...
-    let lastRoleParts: [number, number][] | null = null; // role(parts): creator
+			cfs_.splice(i, 1);
+			continue;
+		}
+		name2character.set(c2.value, [cvMarker, c0.value]);
+		cfs_.splice(i - 1, 2);
+		i--;
+	}
+	// assign creators to roles (and mental gymnastics for parts & CVs)
+	let credits: Credits = {};
+	let roleIDs = new Set<string>();
+	let lastPersonData: PersonData[] | null = null; // role: creator(parts), ...
+	let lastRoleParts: [number, number][] | null = null; // role(parts): creator
     cfs_.forEach(cf => {
-        switch (cf.type) {
+		switch (cf.type) {
             case "role":
-                if (lastPersonData) {
-                    roleIDs.clear();
-                    lastPersonData = null;
-                }
-                lastRoleParts = null;
-                const roleName = cf.value.trim();
-                if (roleName.startsWith("乐器-")) {
-                    roleIDs.add(roleName);
-                    break;
-                }
-                // custom roles support
-                else if (roleName.startsWith("custom-")) {
-                    roleIDs.add(roleName);
-                    break;
-                }
-                const rids = ROLE_MAP[roleName.toLowerCase()];
-                if (!rids) { console.warn(`Unknown role tag: ${cf.value}`); break; }
-                rids.forEach(rid => roleIDs.add(rid));
-                break;
+				if (lastPersonData) {
+					roleIDs.clear();
+					lastPersonData = null;
+				}
+				lastRoleParts = null;
+				const roleName = cf.value.trim();
+				if (PREFIXABLE_ROLES.some((base) => roleName.startsWith(base + '-'))) {
+					roleIDs.add(roleName);
+					break;
+				}
+				// custom roles support
+				else if (roleName.startsWith('custom-')) {
+					roleIDs.add(roleName);
+					break;
+				}
+				const rids = ROLE_MAP[roleName.toLowerCase()];
+				if (!rids) {
+					console.warn(`Unknown role tag: ${cf.value}`);
+					break;
+				}
+				rids.forEach(rid => roleIDs.add(rid));
+				break;
             case "creator":
-                let name = cf.value;
-                if (trimCircle) {
+				let name = cf.value;
+				if (trimCircle) {
                     name = name.replace(/[(（].+[）)]$/, "").trim();
-                    if (!name) break; // don't include "trimmed circle"
-                }
+					if (!name) break; // don't include "trimmed circle"
+				}
                 lastPersonData = Array.from(roleIDs).map(rid => {
                     const rs = credits[rid] = credits[rid] || {};
                     return rs[name] = rs[name] || new PersonData();
-                });
-                if (lastRoleParts) {
+				});
+				if (lastRoleParts) {
                     lastPersonData.forEach(p => p.parts.push(...lastRoleParts!));
-                }
-                break;
+				}
+				break;
             case "parts":
                 const partsString = cf.value.trim().slice(1, -1).replace(/^(Tr|tr|M|m)[\.-]?\s*/, "");
-                const parts = parsePart(partsString); // for now it's [disc, track][]; will be converted number[disc-1][track]
-                if (!lastPersonData) {
-                    lastRoleParts = parts;
-                    break;
-                }
+				const parts = parsePart(partsString); // for now it's [disc, track][]; will be converted number[disc-1][track]
+				if (!lastPersonData) {
+					lastRoleParts = parts;
+					break;
+				}
                 lastPersonData.forEach(p => p.parts.push(...parts));
-                break;
-        }
-    });
-    return credits;
+				break;
+		}
+	});
+	return credits;
 }
 
 const RE_TR = /^(Tr|tr|Track|track)?[.．]?\d+[.．]?\s*/;
 function normalizeTitles(titles: string[]): string[] {
     titles = titles.map(title => title.trim());
     if (titles.length < 2) { return titles; }
-    // remove Tr.01 prefix
-    if (titles.every((title, i) => i % 2 == 1 || RE_TR.test(title))) {
+	// remove Tr.01 prefix
+	if (titles.every((title, i) => i % 2 == 1 || RE_TR.test(title))) {
         titles = titles.map(title => title.replace(RE_TR, ""));
-    }
-    return titles;
+	}
+	return titles;
 }
 
 function _pagenoJoin(arr: number[]): string[] {
-    let a = [...arr, Infinity];
-    let r = [];
-    let start = a[0];
-    for (let i = 1; i < a.length; i++) {
+	let a = [...arr, Infinity];
+	let r = [];
+	let start = a[0];
+	for (let i = 1; i < a.length; i++) {
         if (a[i] - a[i - 1] === 1) { continue; }
-        const rlen = a[i - 1] - start + 1;
+		const rlen = a[i - 1] - start + 1;
         r.push(...(rlen === 1 ? [`${start}`] : rlen === 2 ? [`${start}`, `${a[i - 1]}`] : [`${start}-${a[i - 1]}`]));
-        start = a[i];
-    }
-    return r;
+		start = a[i];
+	}
+	return r;
 }
 
 /// e.g. [1, 2, 3, 5, 6, 7, 9, 10] => "1-3,5-7,9,10"
@@ -585,10 +611,10 @@ export function pagenoJoin(arr: number[]): string {
 }
 
 export function multiDiscPageNoJoin(arr: number[][]): string {
-    const r = [];
-    for (const [i, a] of arr.entries()) {
+	const r = [];
+	for (const [i, a] of arr.entries()) {
         if (a.length === 0) { continue; }
         r.push(_pagenoJoin(a).map(s => `${i + 1}.${s}`).join(", "));
-    }
+	}
     return r.join(", ");
 }

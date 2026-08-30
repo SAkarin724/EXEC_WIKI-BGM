@@ -288,7 +288,7 @@ module.exports = grammar({
       $._role_custom,
       $._role,
     ),
-    _role_instrument: _ => token(prec(1, new RegExp(`乐器-([^${separators}]| )+`))),
+    _role_instrument: _ => token(prec(1, new RegExp(`(乐器|设计|插图)-([^${separators}]| )+`))),
     _role_custom: _ => token(prec(1, new RegExp(`custom-([^${separators}]| )+`))),
     _role: _ => choice(...roles.map(r => field('role', r))),
 

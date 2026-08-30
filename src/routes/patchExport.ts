@@ -92,7 +92,7 @@ export function buildSelectivePatch(
     const relaData = buildRelaData(kept, name2staff, isMultiDisc);
 
     // patchText: group by roleID, keep instrument roles separate (trackInfo style).
-    const patchText = buildPatchText(kept, isMultiDisc);
+    const patchText = buildPatchText(kept, isMultiDisc, name2staff, release);
 
     return { relaData, patchText };
 }
@@ -127,7 +127,9 @@ function buildRelaData(
 
 function buildPatchText(
     kept: [string, { name: string; parts: number[][] }][],
-    isMultiDisc: boolean
+    isMultiDisc: boolean,
+    name2staff: ResolvedRelaMap,
+    release: Readonly<Release>
 ): string {
     // bucket: roleID -> Map<name, parts>
     const bucket = new Map<string, Map<string, number[][]>>();
@@ -147,10 +149,13 @@ function buildPatchText(
     const pushRole = (roleID: string, nameMap: Map<string, number[][]>) => {
         if (!nameMap.size) return;
         const chunks = Array.from(nameMap.entries()).map(([name, parts]) => {
+            // resolve aliases: use the primary staff name, e.g. シロ (墨染サウンド)
+            const staff = name2staff.get(name)?.[0];
+            const display = staff ? release.formatCreator(name, staff.name) : name;
             const hasAnyTrack = parts.some((p) => p.length > 0);
-            if (!hasAnyTrack) return name;
+            if (!hasAnyTrack) return display;
             const pn = isMultiDisc ? multiDiscPageNoJoin(parts) : pagenoJoin(parts[0] ?? []);
-            return `${name}(${pn})`;
+            return `${display}(${pn})`;
         });
         lines.push(`${roleID}：${chunks.join("、")}`);
     };

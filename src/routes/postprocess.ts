@@ -384,7 +384,7 @@ export class Release {
 	}
 
 	private coalesceInstrumentalRoles(rs: [string, string[]][]): [string, string[]][] {
-        if (rs.every(([roleID, _]) => !roleID.startsWith("乐器-"))) {
+		if (rs.every(([roleID]) => !PREFIXABLE_ROLES.some((base) => roleID.startsWith(base + '-')))) {
 			return rs;
 		}
 		// Original construct format：|乐器= 创作者1 (乐器1)、创作者2 (乐器2)

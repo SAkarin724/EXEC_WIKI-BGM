@@ -405,7 +405,7 @@ export class Release {
 			return result;
 		}
 		// New construct format：乐器1 & 乐器2：A、B / 乐器3：C、D
-		// if member sets are identical, merge them into one group
+		// if member sets are identical, merge them into one group.
 		const rest: [string, string[]][] = [];
 		const byBase = PREFIXABLE_ROLES.map((base) => ({
 			base,

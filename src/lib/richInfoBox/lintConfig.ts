@@ -31,7 +31,8 @@ function autofixDate(value: string): string | void {
     const date = RE_DATE.exec(value);
     if (date) {
         [y, m, d] = date.slice(1).map((v) => parseInt(v));
-        if (value.includes('年')) return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}${eventName}`;
+        // 「yyyy年m月d日」「yyyy/m/d」「yyyy-m-d」等各种写法一律统一为 yyyy-mm-dd
+        return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}${eventName}`;
     }
     const enDate = RE_EN_DATE.exec(value);
     if (enDate) {

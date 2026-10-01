@@ -1063,7 +1063,23 @@
             "named": false
           },
           {
+            "type": "ボーカルエディット",
+            "named": false
+          },
+          {
             "type": "マスタリング",
+            "named": false
+          },
+          {
+            "type": "マスタリングエンジニア",
+            "named": false
+          },
+          {
+            "type": "ミキシングエンジニア",
+            "named": false
+          },
+          {
+            "type": "ミックス",
             "named": false
           },
           {
@@ -2306,7 +2322,23 @@
     "named": false
   },
   {
+    "type": "ボーカルエディット",
+    "named": false
+  },
+  {
     "type": "マスタリング",
+    "named": false
+  },
+  {
+    "type": "マスタリングエンジニア",
+    "named": false
+  },
+  {
+    "type": "ミキシングエンジニア",
+    "named": false
+  },
+  {
+    "type": "ミックス",
     "named": false
   },
   {

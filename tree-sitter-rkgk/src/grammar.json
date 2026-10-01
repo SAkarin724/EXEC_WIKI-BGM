@@ -2458,6 +2458,38 @@
           "name": "role",
           "content": {
             "type": "STRING",
+            "value": "マスタリングエンジニア"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "ミックス"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "ミキシングエンジニア"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "ボーカルエディット"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
             "value": "ボーカル"
           }
         },

@@ -13,7 +13,7 @@ const TYPE_COMPLETIONS = [
     { label: "Compose" },
     { label: "Lyrics" },
     { label: "Arrangement" },
-    { label: "Vocal" },
+    { label: "Vocal", boost: 1 },
     { label: "Featured" },
     { label: "Illustration" },
     { label: "Label" },

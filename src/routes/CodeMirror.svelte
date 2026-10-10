@@ -65,6 +65,7 @@
 		placeholder?: string | HTMLElement;
 		onchange?: (value: string) => void;
 		filterPaste?: (text: string) => string;
+		flash?: { line: number; seq: number } | null;
 	};
 	let {
 		value = $bindable(),
@@ -81,7 +82,8 @@
 		readonly = false,
 		placeholder,
 		onchange,
-		filterPaste
+		filterPaste,
+		flash
 	}: CodeMirrorProps = $props();
 
 	let element: HTMLDivElement | undefined = $state();
@@ -109,6 +111,46 @@
 		view = create_editor_view();
 	});
 	onDestroy(() => view?.destroy());
+
+	// Track-locating command: put the caret at the end of the clicked track's
+	// line and flash that line in orange (fade in, then fade out).
+	let handledFlashSeq = 0;
+	$effect(() => {
+		if (!flash || !view) return;
+		if (flash.seq === handledFlashSeq) return;
+		handledFlashSeq = flash.seq;
+		revealAndFlash(flash.line);
+	});
+
+	function revealAndFlash(lineNumber: number) {
+		if (!view) return;
+		const line = view.state.doc.line(lineNumber);
+		view.dispatch({
+			selection: { anchor: line.to },
+			effects: EditorView.scrollIntoView(line.to, { y: 'center' })
+		});
+		view.focus();
+		requestAnimationFrame(() => flashLine(lineNumber));
+	}
+
+	function flashLine(lineNumber: number) {
+		if (!view) return;
+		const line = view.state.doc.line(lineNumber);
+		const dom = view.domAtPos(line.from).node;
+		let el: HTMLElement | null = dom instanceof HTMLElement ? dom : dom.parentElement;
+		while (el && el.nodeType === 1 && !(el as HTMLElement).classList.contains('cm-line')) {
+			el = el.parentElement;
+		}
+		if (!el) return;
+		el.animate(
+			[
+				{ backgroundColor: 'rgba(255, 106, 0, 0)' },
+				{ backgroundColor: 'rgba(255, 106, 0, 0.35)', offset: 0.35 },
+				{ backgroundColor: 'rgba(255, 106, 0, 0)' }
+			],
+			{ duration: 800, easing: 'ease-in-out' }
+		);
+	}
 
 	function create_editor_view(): EditorView {
 		return new EditorView({

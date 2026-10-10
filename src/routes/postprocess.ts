@@ -220,8 +220,9 @@ interface Credits {
 interface CreditsText { [roleID: string]: string[]; } // { roleID: [name, ...] }
 
 export interface Track {
-	title: string;
-	comment: string;
+    title: string;
+    comment: string;
+    line: number;
 }
 
 export class Release {
@@ -261,30 +262,34 @@ export class Release {
 			let ct = new RawTrack();
 			const compactTracks = [ct];
 			disc.tracks.forEach((track, j) => {
+				if (ct.title === "") {
+					ct.line = track.line;
+				}
 				ct.title = trackTitles[j];
 				ct.comment = track.comment;
 				ct.credits.push(...track.credits);
 				if (ct.title) {
-                    compactTracks.push(ct = new RawTrack());
+			compactTracks.push(ct = new RawTrack());
 				}
 			});
-            if (compactTracks[compactTracks.length - 1].title === "") {
+			if (compactTracks[compactTracks.length - 1].title === "") {
 				compactTracks.pop();
 			}
 			// extract credits
 			return compactTracks.map((rt, j) => {
 				const trackCredits = _parseSongCredit(rt.credits, name2character);
 				Object.entries(trackCredits).forEach(([roleID, creators]) => {
-                    const rs = credits[roleID] = credits[roleID] || {};
+			const rs = credits[roleID] = credits[roleID] || {};
 					Object.entries(creators).forEach(([name, pd]) => {
-                        const pd0 = rs[name] = rs[name] || new PersonData();
+			const pd0 = rs[name] = rs[name] || new PersonData();
 						pd0.parts.push([i + 1, j + 1]);
 					});
 				});
 				return {
 					title: rt.title,
-                    comment: rt.comment,
-                }
+			comment: rt.comment,
+			line: rt.line,
+			}
 			});
 		});
 

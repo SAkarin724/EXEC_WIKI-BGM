@@ -173,6 +173,7 @@ export class RawTrack {
     title: string = "";
     comment: string = "";
     credits: CreditField[] = [];
+    line: number = 0;
 }
 
 interface RawDisc {
@@ -217,6 +218,7 @@ function intoRawDisc(root: NodeInfo): RawDisc {
 
 function intoRawTrack(node: NodeInfo): RawTrack {
     const track: RawTrack = new RawTrack();
+    track.line = node.startRow + 1; // 1-based line number for editor locating
     if (node.children.length > 0 && node.children[0].type === "title") {
         track.title = node.children.shift()!.text;
     } else {
@@ -251,7 +253,13 @@ export async function rkgk(onUpdate: (disc: RawRelease) => void) {
     const tsp = await initTreeSitterParser();
     const langData = defineLanguageFacet({
         autocomplete: completeFromList([
-            ...TYPE_COMPLETIONS.map(tp => ({ ...tp, type: "type", apply: applyTypeCompletion })),
+            ...TYPE_COMPLETIONS.map(tp => ({
+                ...tp,
+                // 将乐器相关条目（displayLabel 以“乐器”开头）优先级压至最低，避免干扰其他职位搜索
+                boost: tp.displayLabel?.startsWith("乐器") ? -99 : tp.boost,
+                type: "type",
+                apply: applyTypeCompletion,
+            })),
         ]),
         closeBrackets: { brackets: ["《", "("] },
     });

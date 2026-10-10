@@ -6,6 +6,7 @@ interface LeafInfo {
     text: string;
     startIndex: number;
     endIndex: number;
+    startRow: number;
 }
 
 export interface NodeInfo extends LeafInfo {
@@ -76,7 +77,7 @@ export class TreeSitterParser extends lezer.Parser {
     }
 
     private traverse(cursor: TreeCursor): { root: NodeInfo, leaves: LeafInfo[] } {
-        const self: NodeInfo = { type: cursor.currentFieldName || cursor.nodeType, text: cursor.nodeText, startIndex: cursor.startIndex, endIndex: cursor.endIndex, children: [] };
+        const self: NodeInfo = { type: cursor.currentFieldName || cursor.nodeType, text: cursor.nodeText, startIndex: cursor.startIndex, endIndex: cursor.endIndex, startRow: cursor.startPosition.row, children: [] };
         const leaves = [];
         if (cursor.gotoFirstChild()) {
             do {

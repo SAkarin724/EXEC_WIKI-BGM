@@ -49,6 +49,14 @@
 		new Map(Array.from(currentRelease.relaMap.entries()).filter(([name]) => !removedRela.has(name)))
 	);
 	let name2staff = $derived(resolveRelaMap(filteredRelaMap, dupResolutionEntries));
+	// Locate command sent to the track-info editor when a track title is clicked
+	// in the preview. `seq` bumps so repeated clicks on the same line re-trigger.
+	let trackLocate = $state<{ line: number; seq: number } | null>(null);
+	function onTrackClick(disc: number, track: number) {
+		const tr = currentRelease.tracks[disc]?.[track];
+		if (!tr?.line) return;
+		trackLocate = { line: tr.line, seq: (trackLocate?.seq ?? 0) + 1 };
+	}
 	// Display names of the custom roles currently synced into the infobox.
 	// Used so that deleting / renaming a custom role only removes its own row
 	// from the infobox while preserving every other (manually added) field.
@@ -336,6 +344,7 @@
 			{onUpdate}
 			writeTrackInfoFromRelease={(style: 'parts' | 'tracks') =>
 				writeTrackInfo(fromFormalRelease(currentRelease), style)}
+			locateCommand={trackLocate}
 			class="flex-basis-[38%] flex-grow-4 h-full"
 		/>
 		<div
@@ -359,6 +368,7 @@
 		<Preview
 			release={currentRelease}
 			{name2staff}
+			onTrackClick={onTrackClick}
 			class="flex-basis-[28%] flex-grow-4 h-full min-h-[30.5rem] overflow-auto"
 		/>
 	</div>

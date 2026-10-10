@@ -6,9 +6,10 @@
 	interface PreviewProps {
 		release: Readonly<Release>;
 		name2staff: ResolvedRelaMap;
+		onTrackClick?: (disc: number, track: number) => void;
 		class?: string;
 	}
-	let { release, name2staff, class: class_ = '', ...rest }: PreviewProps = $props();
+	let { release, name2staff, onTrackClick, class: class_ = '', ...rest }: PreviewProps = $props();
 
 	let [creditTopMerged, creditMerged] = $derived.by(() => {
 		const [creditTop, credit] = release.intoTrackSummary();
@@ -95,7 +96,19 @@
 				<div class={'py-2 px-1 ' + (j % 2 !== 0 ? 'bg-bgm-lightgrey' : '')}>
 					<div class="font-size-sm break-words hyphens-auto">
 						{j + 1}
-						{track.title}
+						<span
+							role="button"
+							tabindex="0"
+							class="cursor-pointer hover:text-bgm-teal"
+							title="点击定位到输入框"
+							onclick={() => onTrackClick?.(i, j)}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									onTrackClick?.(i, j);
+								}
+							}}
+						>{track.title}</span>
 						{#if track.comment}
 							<span class="font-size-xs color-bgm-darkgrey">/ {track.comment}</span>
 						{/if}

@@ -12,12 +12,14 @@
 		value: string;
 		onUpdate: (disc: RawRelease) => void;
 		writeTrackInfoFromRelease: (style: 'tracks' | 'parts') => string;
+		locateCommand?: { line: number; seq: number } | null;
 		class?: string;
 	}
 	let {
 		value = $bindable(),
 		onUpdate,
 		writeTrackInfoFromRelease,
+		locateCommand,
 		class: class_ = '',
 		...rest
 	}: TrackInfoProps = $props();
@@ -64,6 +66,7 @@
 			bind:value
 			{filterPaste}
 			{extensions}
+			flash={locateCommand}
 		/>
 	{/await}
 </div>

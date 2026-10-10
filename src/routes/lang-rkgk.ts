@@ -38,11 +38,11 @@ const TYPE_COMPLETIONS = [
     { displayLabel: "編曲", label: "bianqu" },
     { displayLabel: "编曲", label: "bianqu", boost: -99 },
     { displayLabel: "作詞", label: "zuoci" },
-    { displayLabel: "作词-", label: "zuoci", boost: -99  },
+    { displayLabel: "作词-", label: "zuoci", boost: -99 },
     { displayLabel: "厂牌", label: "changpai" },
     { displayLabel: "脚本", label: "jiaoben" },
     { displayLabel: "插图", label: "chatu" },
-    { displayLabel: "插图-", label: "chatu-", boost: -99  },
+    { displayLabel: "插图-", label: "chatu-", boost: -99 },
     { displayLabel: "制作人", label: "zhizuoren" },
     { displayLabel: "出版方", label: "chubanfang" },
     { displayLabel: "录音", label: "luyin" },
@@ -65,7 +65,7 @@ const TYPE_COMPLETIONS = [
     { displayLabel: "人声指导", label: "renshengzhidao" },
     { displayLabel: "音响监督", label: "yinxiangjiandu" },
     { displayLabel: "设计", label: "sheji" },
-    { displayLabel: "设计-", label: "sheji-" boost: -99 },
+    { displayLabel: "设计-", label: "sheji-", boost: -99 },
     { displayLabel: "客串", label: "kechuan" },
     { displayLabel: "乐器-Guitar", label: "Guitar" },
     { displayLabel: "乐器-Acoustic Guitar", label: "Acoustic Guitar" },
@@ -134,7 +134,9 @@ const TYPE_COMPLETIONS = [
 ];
 
 function applyTypeCompletion(view: EditorView, completion: Completion, from: number, to: number) {
-    const comp = `${completion.displayLabel || completion.label}・`;
+    const base = completion.displayLabel || completion.label;
+    // 尾部带 "-" 的条目（如「插图-」「声乐-」）确认时不再追加 "・"
+    const comp = base.endsWith("-") ? base : `${base}・`;
     view.dispatch(insertCompletionText(view.state, comp, from, to));
 }
 

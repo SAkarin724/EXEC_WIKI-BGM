@@ -130,6 +130,12 @@ export function nameEscape(n: string): string {
         const [name, cv] = n.split('(CV', 2);
         return `${nameEscape(name)}(CV${cv.slice(0, 1)}${nameEscape(cv.slice(1, -1))})`;
     }
+    // Alias annotation `name (primaryName)`: escape the name only, keeping the
+    // `(primaryName)` hint outside the 《》 so the patch stays parseable.
+    const alias = n.match(/\s+\(([^()]*)\)$/);
+    if (alias?.index != null) {
+        return `${nameEscape(n.slice(0, alias.index))} (${alias[1]})`;
+    }
     return ((RE_SEP.test(n) && !RE_LATIN_SPACE.test(n)) || RE_ROLE_KEYWORD.test(n)) ? `《${n}》` : n;
 }
 

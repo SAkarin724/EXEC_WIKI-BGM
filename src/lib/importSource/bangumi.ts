@@ -2,12 +2,14 @@ import type { ImportSource, AutoEditor } from "./common";
 import { DefaultDict } from "./common";
 import { getSubjectInfo, getSubjectEpInfo, getSubjectRelaPerson, type SubjectInfo, type SubjectRelaPerson } from "$lib/client";
 import { assembleRelease } from "$lib/bangumiUtils";
+import { fetchStaffPatch, applyStaffPatchToRelease } from "./staffPatch";
 
 export class Bangumi implements ImportSource {
     name = "Bangumi";
     match = /^https:\/\/(?:bangumi\.tv|bgm\.tv)\/subject\/(\d+)$/;
     warning = "";
     options = [
+        { id: "patch", text: "Patch补丁", default: true },
         { id: "trackListCredits", text: "曲目列表与制作人员", default: true },
         { id: "importRela", text: "导入关联的人物", default: true },
         { id: "titleIntro", text: "标题与简介", default: true },
@@ -64,7 +66,19 @@ export class Bangumi implements ImportSource {
                 });
             });
 
-            editor.setTrackInfo(release);
+            // 优先采用 Patch 补丁（staff 修复仓库）提供的信息，而不是默认导入的信息。
+            // 命中 patch 时用 parts 风格写出（曲目号用 (1,3-5) 标记），方便后续
+            // 用 Ctrl+Shift+Y 在 parts / tracks 之间切换。
+            if (opts.patch) {
+                const patch = await fetchStaffPatch(this.sid);
+                if (patch) {
+                    editor.setTrackInfo(applyStaffPatchToRelease(patch, release), 'parts');
+                } else {
+                    editor.setTrackInfo(release);
+                }
+            } else {
+                editor.setTrackInfo(release);
+            }
         }
 
         if (opts.titleIntro) {

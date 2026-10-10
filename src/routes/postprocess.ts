@@ -198,7 +198,7 @@ export const RE_ROLE_KEYWORD = new RegExp(Object.keys(ROLE_MAP).join('|'), 'i');
 // Roles that support the "X-子角色" split syntax (e.g. 乐器-吉他). "设计" and
 // "插图" share the same construction rules as "乐器", e.g. 设计-封面 / 插图-内页.
 // Keep in sync with `_role_instrument` in grammar.js.
-export const PREFIXABLE_ROLES = ['乐器', '设计', '插图'] as const;
+export const PREFIXABLE_ROLES = ['乐器', '设计', '插图', '作曲', '作词', '编曲', '制作人', '声乐', '和声', '合唱', '录音', '混音', '母带制作'] as const;
 
 export interface PostProcessOptions {
 	shouldCleanCircleParentheses: boolean;

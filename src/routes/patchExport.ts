@@ -18,6 +18,7 @@ import { type Release, PREFIXABLE_ROLES, pagenoJoin, multiDiscPageNoJoin } from 
 import { Match, type ResolvedRelaMap } from './disambiguation';
 import { orderedEntries } from '$lib/bangumiUtils';
 import { type SubjectRelaPerson } from '$lib/client';
+import { nameEscape } from './trackInfoWriter';
 
 type NameData = { parts: number[][] };
 
@@ -153,7 +154,7 @@ function buildPatchText(
 		const chunks = Array.from(nameMap.entries()).map(([name, parts]) => {
 			// resolve aliases: use the primary staff name, e.g. シロ (墨染サウンド)
 			const staff = name2staff.get(name)?.[0];
-			const display = staff ? release.formatCreator(name, staff.name) : name;
+			const display = nameEscape(staff ? release.formatCreator(name, staff.name) : name);
 			const hasAnyTrack = parts.some((p) => p.length > 0);
 			if (!hasAnyTrack) return display;
 			const pn = isMultiDisc ? multiDiscPageNoJoin(parts) : pagenoJoin(parts[0] ?? []);

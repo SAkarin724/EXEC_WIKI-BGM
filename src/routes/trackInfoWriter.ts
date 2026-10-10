@@ -125,7 +125,7 @@ export function fromFormalRelease(rf: Readonly<FormalRelease>, name2staff?: Reso
 }
 
 
-function nameEscape(n: string): string {
+export function nameEscape(n: string): string {
     if (n.includes('(CV')) {
         const [name, cv] = n.split('(CV', 2);
         return `${nameEscape(name)}(CV${cv.slice(0, 1)}${nameEscape(cv.slice(1, -1))})`;

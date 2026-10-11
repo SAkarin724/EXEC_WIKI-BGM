@@ -1,5 +1,22 @@
 
 const separators = ` 　\t&＆:：\/／・、；,`;
+// Roles that support the "X-子角色" split syntax (e.g. 乐器-吉他).
+// Keep in sync with `PREFIXABLE_ROLES` in src/routes/postprocess.ts.
+const prefixableRoles = [
+  '乐器',
+  '设计',
+  '插图',
+  '作曲',
+  '作词',
+  '编曲',
+  '制作人',
+  '声乐',
+  '和声',
+  '合唱',
+  '录音',
+  '混音',
+  '母带制作',
+];
 const roles = [
   'Custom',
   'custom',
@@ -394,7 +411,7 @@ module.exports = grammar({
       $._role_custom,
       $._role,
     ),
-    _role_instrument: _ => token(prec(1, new RegExp(`(乐器|设计|插图)-([^${separators}]| )+`))),
+    _role_instrument: _ => token(prec(1, new RegExp(`(${prefixableRoles.join('|')})-([^${separators}]| )+`))),
     _role_custom: _ => token(prec(1, new RegExp(`custom-([^${separators}]| )+`))),
     _role: _ => choice(...roles.map(r => field('role', r))),
 

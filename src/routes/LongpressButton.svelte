@@ -8,13 +8,13 @@
 	}
 	let { class: class_ = '', onclick, children, ...rest }: ButtonProps = $props();
 	let fill = $state(0);
-	let duration = $state(1100);
+	let duration = $state(700);
 	let holdTimer: NodeJS.Timeout;
 
 	function hold(event: MouseEvent) {
 		event.preventDefault();
 		fill = 1;
-		duration = 1100;
+		duration = 700;
 		holdTimer = setTimeout(() => {
 			fill = 0;
 			duration = 250;

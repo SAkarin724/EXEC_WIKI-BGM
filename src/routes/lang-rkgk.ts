@@ -36,7 +36,7 @@ const TYPE_COMPLETIONS = [
     { displayLabel: "作曲", label: "zuoqu" },
     { displayLabel: "作曲-", label: "zuoqu", boost: -99 },
     { displayLabel: "編曲", label: "bianqu" },
-    { displayLabel: "编曲", label: "bianqu", boost: -99 },
+    { displayLabel: "编曲-", label: "bianqu", boost: -99 },
     { displayLabel: "作詞", label: "zuoci" },
     { displayLabel: "作词-", label: "zuoci", boost: -99 },
     { displayLabel: "厂牌", label: "changpai" },

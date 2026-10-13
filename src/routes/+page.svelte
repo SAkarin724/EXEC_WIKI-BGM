@@ -83,7 +83,9 @@
 			toast(`<b>嗯……？</b><br/>${getRandomTip()}`, { duration: 8000 });
 		}, 400);
 	}
-	function marshal() {
+	// `includeCover` 只有「极速打包带走」会传 true：普通打包与二连击是给已有条目
+	// 编辑用的，不需要几 MB 的封面 base64 挤进剪贴板。
+	function marshal(includeCover = true) {
 		infoBox.storeRecentCombo(metaTagsState.val, metaTagsRecentCombosState);
 		const trackList = currentRelease.tracks.map((disc) => disc.map((tr) => tr.title).join('\n'));
 		const trackTable = currentRelease.tracks
@@ -108,7 +110,7 @@
 			trackList: trackList.length > 1 ? trackList : trackList[0],
 			trackTable,
 			relaTable,
-			...(coverState ? { cover: coverState.dataUrl } : {})
+			...(includeCover && coverState ? { cover: coverState.dataUrl } : {})
 		};
 	}
 	async function pack() {
@@ -117,7 +119,9 @@
 		const relaOnly = shouldPackRelaOnly;
 		const fastPack = shouldFastPack;
 		const thenOpen = shouldPackThenOpen;
-		const data: Record<string, unknown> = marshal();
+		// 只有「极速打包带走」带封面；普通打包与二连击不带，免得几 MB 的
+		// 封面 base64 白占剪贴板（它们对应的是编辑已有条目的流程）。
+		const data: Record<string, unknown> = marshal(fastPack);
 		if (relaOnly) {
 			await navigator.clipboard.writeText(data.relaTable as string);
 		} else {

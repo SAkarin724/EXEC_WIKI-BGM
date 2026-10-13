@@ -2,7 +2,7 @@
 	import type { HTMLButtonAttributes } from 'svelte/elements';
 
 	// 长按触发时间，同时也是进度条填满的动画时长，两者必须一致
-	const HOLD_DURATION = 650;
+	const HOLD_DURATION = 550;
 
 	interface ButtonProps extends HTMLButtonAttributes {
 		class?: string;

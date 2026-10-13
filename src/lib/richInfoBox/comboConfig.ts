@@ -18,10 +18,11 @@ export const COMBO_CONFIG: {
             { text: "EP", note: "迷你专辑、Mini-Album、ミニアルバム" },
             { text: "Mini-Album", note: "迷你专辑、ミニアルバム、EP" },
             { text: "Soundtrack", note: "原声带、サウンドトラック" },
+            "CD-R",
             "Compilation",
             "DL Card",
+            "Cassette",
             "Maxi",
-            "CD-R",
         ],
         toRaw(value: string): [string, string][] {
             if (Array.isArray(value)) {

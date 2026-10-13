@@ -161,9 +161,21 @@
 	let shiftMode = $state(false);
 	let hoverPackBtn = $state(false);
 	let shouldPackRelaOnly = $derived(hoverPackBtn && optMode);
+	// "仅复制关联" must stay true to its label: never open the new-subject
+	// page when the pack copies only the relation table.
 	let shouldPackThenOpen = $derived(
-		(hoverPackBtn && shiftMode) !== settingsState.val.defaultOpenBGMNewAfterPack
+		!shouldPackRelaOnly &&
+			(hoverPackBtn && shiftMode) !== settingsState.val.defaultOpenBGMNewAfterPack
 	);
+
+	// Re-derive the modifier state from a live event instead of toggling it on
+	// individual keyup/keydown. A swallowed keyup (Alt+Tab, IME input-mode
+	// switch, window blur) used to leave the state stuck on, so merely
+	// hovering the pack button wrongly showed "仅复制关联".
+	function syncModifiers(e: KeyboardEvent | MouseEvent) {
+		optMode = e.altKey;
+		shiftMode = e.shiftKey;
+	}
 
 	const editor = {
 		associableFields,
@@ -216,10 +228,17 @@
 	<title>EXEC_WIKI=BGM/.</title>
 </head>
 
+<svelte:window
+	onblur={() => {
+		// Alt+Tab and focusing the browser menu bar swallow keyup events;
+		// clear the latched modifiers so they can't linger with no key held.
+		optMode = false;
+		shiftMode = false;
+	}}
+/>
 <svelte:body
 	onkeydown={(e: KeyboardEvent) => {
-		if (e.altKey) optMode = true;
-		if (e.shiftKey) shiftMode = true;
+		syncModifiers(e);
 		if (e.key === 'p' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
 			showSubmitDialog = true;
 			(async () => {
@@ -227,10 +246,7 @@
 			})();
 		}
 	}}
-	onkeyup={(e: KeyboardEvent) => {
-		if (!e.altKey) optMode = false;
-		if (!e.shiftKey) shiftMode = false;
-	}}
+	onkeyup={syncModifiers}
 />
 <Header edgefade>
 	<Gallery relaMap={currentRelease.relaMap} bind:dupResolution bind:showRelaDB class="h-35" />
@@ -241,9 +257,29 @@
 		<Button class="w-20 text-lg" onclick={async () => (showImportDialog = true)}>导入…</Button>
 		<div class="flex-grow-1 h-[1rem] mx-3 p-2"></div>
 		<Button
+<<<<<<< HEAD
+=======
+			class="w-31 text-lg"
+			onclick={copyPatch}
+			onmouseenter={(e: MouseEvent) => {
+				hoverCopyPatchBtn = true;
+				syncModifiers(e);
+			}}
+			onmousemove={syncModifiers}
+			onmouseleave={() => (hoverCopyPatchBtn = false)}
+			title={useShiftOnCopy ? '复制全部 Patch 到剪贴板' : '只复制符合条件的 Patch 到剪贴板'}
+		>
+			{useShiftOnCopy ? '复制全部 Patch' : '复制 Patch'}
+		</Button>
+		<Button
+>>>>>>> 627eef8 (fix: shotcut keys and button logical)
 			class="{!shouldPackRelaOnly && shouldPackThenOpen ? '' : 'w-31'} text-lg"
 			onclick={pack}
-			onmouseenter={() => (hoverPackBtn = true)}
+			onmouseenter={(e: MouseEvent) => {
+				hoverPackBtn = true;
+				syncModifiers(e);
+			}}
+			onmousemove={syncModifiers}
 			onmouseleave={() => (hoverPackBtn = false)}
 		>
 			{@html shouldPackRelaOnly

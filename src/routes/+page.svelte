@@ -22,6 +22,8 @@
 	import SubmitDialog from './SubmitDialog.svelte';
 	import ConfirmationDialog from '$lib/ConfirmationDialog.svelte';
 	import Title from './Title.svelte';
+	import Cover from './Cover.svelte';
+	import { type ProcessedCover } from './coverImage.ts';
 	import { pushState, type ContentState } from './History.svelte';
 	import { type BGMSession, refreshSession } from '$lib/bangumiSession';
 	import { importPersonCreated, importRelaHistory, importPersonBatch } from './relaDB.ts';
@@ -74,6 +76,7 @@
 			})
 		);
 		setState();
+		coverState = null;
 		dupResolution.clear();
 		removedRela.clear();
 		setTimeout(() => {
@@ -104,12 +107,18 @@
 			metaTags: metaTagsState.val,
 			trackList: trackList.length > 1 ? trackList : trackList[0],
 			trackTable,
-			relaTable
+			relaTable,
+			...(coverState ? { cover: coverState.dataUrl } : {})
 		};
 	}
 	async function pack() {
+		// Snapshot the modifier-driven intent up front: the clipboard write is
+		// awaited and the user may release the keys before it resolves.
+		const relaOnly = shouldPackRelaOnly;
+		const fastPack = shouldFastPack;
+		const thenOpen = shouldPackThenOpen;
 		const data: Record<string, unknown> = marshal();
-		if (shouldPackRelaOnly) {
+		if (relaOnly) {
 			await navigator.clipboard.writeText(data.relaTable as string);
 		} else {
 			// Ported from the userscript's `patchExportedJsonString`: attach the
@@ -126,7 +135,11 @@
 			await navigator.clipboard.writeText(JSON.stringify(data));
 		}
 		toast('已复制到剪贴板');
-		if (shouldPackThenOpen) {
+		if (fastPack) {
+			// "极速打包带走" (Ctrl+Shift): open the new-subject page right away
+			// instead of taking the 700ms two-hit-combo pause.
+			window.open('https://bgm.tv/new_subject/3');
+		} else if (thenOpen) {
 			setTimeout(() => window.open('https://bgm.tv/new_subject/3'), 700);
 		}
 	}
@@ -208,6 +221,9 @@
 	);
 	let descState = localStorage$state('desc', '');
 	let trackInfoState = localStorage$state('trackInfo', '');
+	// Cover image for the entry being packed. Kept in memory only (it can be
+	// several MB) and reset by "再来一张", so it never leaks into the next entry.
+	let coverState = $state<ProcessedCover | null>(null);
 	let session = localStorage$state<BGMSession>(
 		'wiki-write-session',
 		{ token: '', expiresAt: 0 },
@@ -225,9 +241,13 @@
 
 	let optMode = $state(false);
 	let shiftMode = $state(false);
+	let ctrlMode = $state(false);
 	let hoverPackBtn = $state(false);
 	let hoverCopyPatchBtn = $state(false);
 	let shouldPackRelaOnly = $derived(hoverPackBtn && optMode);
+	// "极速打包带走" (Ctrl+Shift while hovering the pack button): copy the full
+	// payload and open the new-subject page immediately, without the 700ms wait.
+	let shouldFastPack = $derived(hoverPackBtn && ctrlMode && shiftMode && !shouldPackRelaOnly);
 	// "仅复制关联" must stay true to its label: never open the new-subject
 	// page when the pack copies only the relation table.
 	let shouldPackThenOpen = $derived(
@@ -245,6 +265,7 @@
 	function syncModifiers(e: KeyboardEvent | MouseEvent) {
 		optMode = e.altKey;
 		shiftMode = e.shiftKey;
+		ctrlMode = e.ctrlKey || e.metaKey;
 	}
 
 	const editor = {
@@ -304,6 +325,7 @@
 		// clear the latched modifiers so they can't linger with no key held.
 		optMode = false;
 		shiftMode = false;
+		ctrlMode = false;
 	}}
 />
 <svelte:body
@@ -345,8 +367,9 @@
 		>
 			{useShiftOnCopy ? '复制全部 Patch' : '复制 Patch'}
 		</Button>
+		<Cover bind:value={coverState} />
 		<Button
-			class="{!shouldPackRelaOnly && shouldPackThenOpen ? '' : 'w-31'} text-lg"
+			class="{!shouldPackRelaOnly && (shouldPackThenOpen || shouldFastPack) ? '' : 'w-31'} text-lg"
 			onclick={pack}
 			onmouseenter={(e: MouseEvent) => {
 				hoverPackBtn = true;
@@ -357,9 +380,11 @@
 		>
 			{@html shouldPackRelaOnly
 				? '仅复制<wbr/>关联'
-				: shouldPackThenOpen
-					? '打包带走<wbr/>添加新音乐<wbr/>二连击'
-					: '打包<wbr/>带走！'}
+				: shouldFastPack
+					? '极速打包<wbr/>带走'
+					: shouldPackThenOpen
+						? '打包带走<wbr/>添加新音乐<wbr/>二连击'
+						: '打包<wbr/>带走！'}
 		</Button>
 	</div>
 	<div class="flex flex-wrap flex-justify-between h-66vh">

@@ -6,7 +6,10 @@
 		widthUnbound?: boolean;
 	}
 
-	export function tooltip(element: HTMLElement, options: TooltipOptions): { destroy: () => void } {
+	export function tooltip(
+		element: HTMLElement,
+		options: TooltipOptions
+	): { update: (options: TooltipOptions) => void; destroy: () => void } {
 		let div: HTMLDivElement;
 		options.widthUnbound = options.widthUnbound ?? true;
 		const fontSize = window.getComputedStyle(element).fontSize;
@@ -68,6 +71,10 @@
 		element.addEventListener('mouseleave', mouseLeave);
 
 		return {
+			update(next: TooltipOptions) {
+				next.widthUnbound = next.widthUnbound ?? true;
+				options = next;
+			},
 			destroy() {
 				element.removeEventListener('mouseenter', mouseEnter);
 				element.removeEventListener('mouseleave', mouseLeave);

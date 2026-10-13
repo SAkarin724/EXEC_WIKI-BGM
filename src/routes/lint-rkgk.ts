@@ -1,4 +1,5 @@
 import { Role, ROLE_MAP } from "./postprocess";
+import { INSTRUMENT_NAMES } from "./lang-rkgk";
 
 import { syntaxTree } from "@codemirror/language";
 import { type Extension } from "@codemirror/state";
@@ -7,6 +8,36 @@ import { linter, type Action, type Diagnostic } from "@codemirror/lint";
 import * as lezer from "@lezer/common";
 
 const PAN_VOCAL = new Set(Object.entries(ROLE_MAP).filter(([_, v]) => v[0] === Role.V || v[0] === Role.FV).map(([k, _]) => k));
+
+const INSTRUMENT_NAMES_LOWER = new Set(INSTRUMENT_NAMES.map((name) => name.toLowerCase()));
+
+// 行首形如「职位名 + 分隔符」的写法，如 `Guitar：某人`、`Mix：某人`
+const RE_ROLE_HEAD = /^[ 　\t]*([^：:・]+?)[ 　\t]*[：:・]/;
+
+interface RoleHead {
+    from: number;
+    to: number;
+    name: string;
+}
+
+/**
+ * 找出被当成曲名吞进标题里的行首职位名。
+ * 像 `Guitar：某人`、`Mix：某人` 都不是解析器认识的职位写法，
+ * 于是整行会成为 song_title 的一部分，这里把它们逐行捞出来。
+ */
+function scanRoleHeads(text: string, offset: number): RoleHead[] {
+    const heads: RoleHead[] = [];
+    let lineStart = 0;
+    text.split("\n").forEach((line) => {
+        const m = RE_ROLE_HEAD.exec(line);
+        if (m) {
+            const from = offset + lineStart + line.indexOf(m[1]);
+            heads.push({ from, to: from + m[1].length, name: m[1] });
+        }
+        lineStart += line.length + 1;
+    });
+    return heads;
+}
 
 export function getLinter(): Extension {
     return linter((view: EditorView): readonly Diagnostic[] => {
@@ -19,15 +50,18 @@ export function getLinter(): Extension {
             lineEnd: number;
             hasVocal: boolean;
             startsWith歌: boolean;
+            roleHeads: RoleHead[];
         }
         let trs: LintTrack[] = [];
         syntaxTree(view.state).cursor().iterate((node) => {
             switch (node.name) {
                 case "heading": // title
+                    const title = getText(node);
                     trs.push({
-                        node: node.node, featStart: getText(node).indexOf("feat."),
+                        node: node.node, featStart: title.indexOf("feat."),
                         lineEnd: node.to, hasVocal: false,
-                        startsWith歌: /^歌[：:・ ]/.test(getText(node)),
+                        startsWith歌: /^歌[：:・ ]/.test(title),
+                        roleHeads: scanRoleHeads(title, node.from),
                     });
                     return;
                 case "comment":
@@ -68,7 +102,25 @@ export function getLinter(): Extension {
                 }
             }
         ];
-        trs.forEach(({ node, featStart, lineEnd, hasVocal, startsWith歌 }) => {
+        let mixEdits: { from: number, to: number }[] = [];
+        const mixActions: Action[] = [
+            {
+                name: "替换“Mix”为“Mixing”", apply(view) {
+                    const c = mixEdits.map(({ from, to }) => ({ from, to, insert: "Mixing" }));
+                    view.dispatch({ changes: c });
+                }
+            }
+        ];
+        let 乐器Edits: { from: number }[] = [];
+        const 乐器Actions: Action[] = [
+            {
+                name: "加“乐器-”前缀", apply(view) {
+                    const c = 乐器Edits.map(({ from }) => ({ from, insert: "乐器-" }));
+                    view.dispatch({ changes: c });
+                }
+            }
+        ];
+        trs.forEach(({ node, featStart, lineEnd, hasVocal, startsWith歌, roleHeads }) => {
             if (featStart !== -1 && !hasVocal) {
                 const feat = view.state.sliceDoc(node.from + featStart + 5, node.to).trim().replace(/[\)）]$/, "");
                 featEdits.push({ from: lineEnd, insert: feat });
@@ -89,6 +141,25 @@ export function getLinter(): Extension {
                     actions: 歌Actions,
                 });
             }
+            roleHeads.forEach(({ from, to, name }) => {
+                if (name.toLowerCase() === "mix") {
+                    mixEdits.push({ from, to });
+                    diagnostics.push({
+                        from, to,
+                        message: "这个职位是不是「Mixing」？",
+                        severity: "warning",
+                        actions: mixActions,
+                    });
+                } else if (INSTRUMENT_NAMES_LOWER.has(name.toLowerCase())) {
+                    乐器Edits.push({ from });
+                    diagnostics.push({
+                        from, to,
+                        message: "这个职位是不是「乐器」？",
+                        severity: "warning",
+                        actions: 乐器Actions,
+                    });
+                }
+            });
         });
         return diagnostics;
     });

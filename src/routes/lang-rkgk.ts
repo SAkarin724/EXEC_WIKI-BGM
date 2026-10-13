@@ -133,6 +133,14 @@ const TYPE_COMPLETIONS = [
     { displayLabel: "乐器-Sitar", label: "Sitar" },
 ];
 
+/**
+ * 乐器名列表，取自上方「乐器-」补全项（单一数据源）。写法为 `乐器-<乐器名>`。
+ * lint-rkgk 用它判断被当成职位写出来的乐器名（如 `Guitar：某人`）。
+ */
+export const INSTRUMENT_NAMES = TYPE_COMPLETIONS
+    .filter(({ displayLabel }) => displayLabel?.startsWith("乐器-"))
+    .map(({ displayLabel }) => displayLabel!.slice("乐器-".length));
+
 function applyTypeCompletion(view: EditorView, completion: Completion, from: number, to: number) {
     const base = completion.displayLabel || completion.label;
     // 尾部带 "-" 的条目（如「插图-」「声乐-」）确认时不再追加 "・"

@@ -5,6 +5,7 @@ import { type RawRelease, RawTrack, type CreditField } from './lang-rkgk';
 import { queryNameOrAliasBulk, type Staff } from '$lib/db';
 import { type ResolvedRelaMap } from './disambiguation';
 import { parsePart } from '$lib/bangumiUtils';
+import { starringCvNames } from './starringCredit';
 
 export enum Role {
     undef = "",
@@ -366,6 +367,8 @@ export class Release {
 	private async assignRelaMap() {
         const allCreators = Array.from(new Set<string>([
             ...Object.values(this.credits).flatMap(Object.keys),
+            // 角色曲老写法（`角色 starring 声优`）
+            ...starringCvNames(this.credits),
         ]));
 		const qr = await queryNameOrAliasBulk(allCreators);
 		this.relaMap = new Map(allCreators.map((creator, i) => [creator, qr[i]]));
@@ -523,16 +526,8 @@ export class Release {
 			const pbase = PREFIXABLE_ROLES.find((base) => roleID.startsWith(base + '-'));
 			if (pbase) roleID = pbase;
 			Object.entries(creators).forEach(([creator, pd]) => {
-				const staff = name2staff.get(creator)?.[0];
-				if (!staff) return;
-				const rtm = r.get(staff.id) ?? new Map<string, number[][]>();
-				let parts = pd.parts;
-				if (rtm.has(roleID)) {
-					// in case of multiple alias, merge parts
-					parts = rtm.get(roleID)!.map((a, i) => Array.from(new Set([...a, ...parts[i]])));
-				}
-				rtm.set(roleID, parts);
-				r.set(staff.id, rtm);
+				// 角色曲老写法（`角色 starring 声优`）
+				const starring = resolvePlainStarring(creator);
 			});
 		});
 		const isMultiDisc = this.tracks.length > 1;
@@ -585,13 +580,43 @@ function parseSongCredit(
 		return /[a-zA-Z]$/.test(c0.value) && /^[a-zA-Z]/.test(c2.value);
 	}
 	let cfs_ = [...cfs];
+	/**
+	 * 分隔符两侧是否属于同一个名字（是则返回合并后的名字文本）：
+	 * 1. 拉丁字母相邻：原有规则，`Masahiro "Godspeed" Aoki`；
+	 * 2. 连接词碎片：语法层按分隔符切字符，`A feat. B` / `A starring B` / `A × B`
+	 *    会被切成碎片，这里粘回完整写法，供 splitArtistUnits / splitStarringCredit 识别；
+	 * 3. `&` 本身是分隔符（`A & B`），连着符号一起粘回来。
+	 */
+	const glueName = (sep: CreditField, prev: CreditField, next: CreditField): string | null => {
+		if (prev?.type !== "creator" || next?.type !== "creator") return null;
+
+		// `&` 在语法层是分隔符，而且连续的「分隔符字符」会并成一个 token，
+		// 所以 `A & B` 的分隔符实际是 `" & "`（两侧带空格），要按连接符处理
+		if (/^\s*[&＆]+\s*$/.test(sep.value)) {
+			return `${prev.value} ${sep.value.trim().replace(/＆/g, '&')} ${next.value}`;
+		}
+		if (!/^\s+$/.test(sep.value)) return null;
+
+		const glue =
+			testEdge(prev, next) ||
+			isJoinerFragment(prev.value) ||
+			isJoinerFragment(next.value) ||
+			endsWithJoinerFragment(prev.value) ||
+			startsWithJoinerFragment(next.value);
+		if (!glue) return null;
+
+		return `${prev.value} ${next.value}`;
+	};
+
 	// merge creator fragments; remove creatorSeperator
 	for (let i = 0; i < cfs_.length; i++) {
         if (cfs_[i].type !== "creatorSeparator") { continue; }
         if (i === 0) { cfs_.splice(0, 0, { type: "creator", value: "" }); i++; }
         else if (i === cfs_.length - 1) { cfs_.push({ type: "creator", value: "" }); }
-		if (/^\s+$/.test(cfs_[i].value) && testEdge(cfs_[i - 1], cfs_[i + 1])) {
-            cfs_.splice(i - 1, 3, { type: "creator", value: `${cfs_[i - 1].value} ${cfs_[i + 1].value}`.trim() });
+
+		const merged = glueName(cfs_[i], cfs_[i - 1], cfs_[i + 1]);
+		if (merged !== null) {
+			cfs_.splice(i - 1, 3, { type: "creator", value: merged.trim() });
 			i--;
 		} else {
 			cfs_.splice(i, 1);

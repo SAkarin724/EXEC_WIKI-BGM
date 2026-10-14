@@ -225,6 +225,33 @@ export interface Track {
     line: number;
 }
 
+/**
+ * 归一化（全半角 / 大小写）后的包含判断：别名是否已出现在名字里。
+ * 单个字符的别名太容易误判（例如 别名「空」、名字「天空」），不参与判断。
+ */
+export function containsNormalizedName(haystack: string, needle: string): boolean {
+	if (needle.trim().length < 2) return false;
+
+	const norm = (s: string) => s.normalize('NFKC').toLowerCase();
+	return norm(haystack).includes(norm(needle.trim()));
+}
+
+/**
+ * 去掉名字末尾已经包含在名字里的别名标注：
+ * 「ぐぅせぇguse (ぐぅせぇ)」→「ぐぅせぇguse」。
+ * 别名文字仍然留在名字里，bgm 依旧能关联上，所以这个标注是冗余的。
+ */
+export function stripRedundantAlias(name: string): string {
+	const m = name.match(/\s*[（(]([^()（）]*)[)）]\s*$/);
+	if (!m || m.index == null) return name;
+
+	const head = name.slice(0, m.index).trim();
+	const alias = m[1].trim();
+	if (!head || !alias) return name;
+
+	return containsNormalizedName(head, alias) ? head : name;
+}
+
 export class Release {
 	credits: Credits;
 	tracks: Track[][];
@@ -370,7 +397,8 @@ export class Release {
                 displayRoleName(roleID),  // convert Role name
 				Object.entries(creators)
 					.sort(([a, _], [b, __]) => fa[a] - fa[b])
-					.map(([c, _]) => this.formatCreator(c, name2staff.get(c)?.[0]?.name))
+					// Infobox 走专用版本：去掉已经包含在名字里的冗余别名标注
+					.map(([c, _]) => this.formatCreatorForInfobox(c, name2staff.get(c)?.[0]?.name))
 			] as [string, string[]];
 		});
 		const rsc = this.coalesceInstrumentalRoles(rs);
@@ -383,6 +411,27 @@ export class Release {
 		let r = name;
 		if (primaryName && name !== primaryName) {
 			r = `${name} (${primaryName})`;
+		}
+		const character = this.name2character.get(name);
+		if (character) {
+			const [cvMarker, char] = character;
+			r = `${char}(CV${cvMarker}${r})`;
+		}
+		return r;
+	}
+
+	/**
+	 * Infobox 专用版的 formatCreator：`名字 (主名)` 只为帮 bgm 关联到本人，
+	 * 主名已经出现在名字里时（ぐぅせぇguse、Masahiro "Godspeed" Aoki）纯属冗余，去掉。
+	 *
+	 * 刻意与 formatCreator 分开：patch 文本（patchExport）与曲目数据
+	 * （trackInfoWriter.fromFormalRelease）仍走原版、原样保留别名标注，
+	 * 维基端组件的识别依赖它——两边不要合并。预览（Preview.svelte）复用同一组函数。
+	 */
+	formatCreatorForInfobox(name: string, primaryName: string | undefined): string {
+		let r = stripRedundantAlias(name);
+		if (primaryName && !containsNormalizedName(r, primaryName)) {
+			r = `${r} (${primaryName})`;
 		}
 		const character = this.name2character.get(name);
 		if (character) {

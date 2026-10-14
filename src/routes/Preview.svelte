@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Release } from './postprocess';
+	import { Release, containsNormalizedName, stripRedundantAlias } from './postprocess';
 	import { Match, type ResolvedRelaMap } from './disambiguation';
 	import { orderedEntries } from '$lib/bangumiUtils';
 
@@ -35,17 +35,42 @@
 	interface NameInfo {
 		name: string;
 		link?: { id: number; name: string };
+		/** 主名就在名字里时，把名字里的主名那一段单独标出来（渲成链接） */
+		inline?: { before: string; alias: string; after: string };
+		/** 主名在名字里但定位不到片段（全半角差异等）时，只显示名字、不显示链接名 */
+		showLinkName?: boolean;
 		isConflict: boolean;
 		character?: { name: string; cvMarker: string };
 	}
 	function representName(name: string): NameInfo {
 		const match = name2staff.get(name);
 		const [staff, m] = match ?? [undefined, Match.None];
-		const r: NameInfo = { name, isConflict: m === Match.Conflict };
+		// 去掉名字末尾已经包含在名字里的冗余别名标注（与 Infobox 的产物保持一致）
+		const display = stripRedundantAlias(name);
+		const r: NameInfo = { name: display, isConflict: m === Match.Conflict };
+
 		if (m !== Match.None && m !== Match.Conflict) {
 			r.link = { id: staff.id, name: staff.name };
-			if (name === staff.name) r.name = '';
+
+			// 主名已经出现在名字里（ぐぅせぇguse / Masahiro "Godspeed" Aoki）：
+			// 不再显示冗余的 `名字 (主名)`，而是把名字里的主名那一段直接渲成链接
+			// ——这也正是 bgm 用它关联该人物的方式。
+			if (containsNormalizedName(display, staff.name)) {
+				const at = display.toLowerCase().indexOf(staff.name.toLowerCase());
+
+				if (at >= 0) {
+					r.inline = {
+						before: display.slice(0, at),
+						alias: display.slice(at, at + staff.name.length),
+						after: display.slice(at + staff.name.length)
+					};
+					r.name = '';
+				} else {
+					r.showLinkName = false;
+				}
+			}
 		}
+
 		const char = release.name2character.get(name);
 		if (char) {
 			r.character = { name: char[1], cvMarker: char[0] };
@@ -59,8 +84,16 @@
  -->{#if ni.isConflict}
 		<span class="text-bgm-pink">{ni.name}</span>
 	{:else if ni.link}
-		{#if ni.name}{ni.name} ({/if}<a href="https://bgm.tv/person/{ni.link.id}">{ni.link.name}</a
-		>{#if ni.name}){/if}
+		{#if ni.inline}
+			{ni.inline.before}<a href="https://bgm.tv/person/{ni.link.id}">{ni.inline.alias}</a
+			>{ni.inline.after}
+		{:else if !ni.name}
+			<a href="https://bgm.tv/person/{ni.link.id}">{ni.link.name}</a>
+		{:else if ni.showLinkName === false}
+			{ni.name}
+		{:else}
+			{ni.name} (<a href="https://bgm.tv/person/{ni.link.id}">{ni.link.name}</a>)
+		{/if}
 	{:else}
 		{ni.name}
 	{/if}<!--

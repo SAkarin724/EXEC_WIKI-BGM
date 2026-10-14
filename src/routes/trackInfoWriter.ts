@@ -96,8 +96,13 @@ export function fromFormalRelease(rf: Readonly<FormalRelease>, name2staff?: Reso
         pushCredit = (credit: Credits, role: string, name: string) => {
             credit[role] = credit[role] ?? [];
             const staff = name2staff.get(name)?.[0];
-            if (!staff) return;
-            credit[role].push(staff.name);
+            
+            // 角色曲老写法（`角色 starring 声优`）：声优是人物，角色不是。
+            // 声优对得上就按原写法写出，角色名不会因此被关联。
+            const starring = resolvePlainStarring(name);
+            if (starring && name2staff.get(starring.cv)?.[0]) {
+                credit[role].push(stripRedundantAlias(name));
+            }
         }
     } else {
         pushCredit = (credit: Credits, role: string, name: string) => {

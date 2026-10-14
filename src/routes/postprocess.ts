@@ -5,6 +5,15 @@ import { type RawRelease, RawTrack, type CreditField } from './lang-rkgk';
 import { queryNameOrAliasBulk, type Staff } from '$lib/db';
 import { type ResolvedRelaMap } from './disambiguation';
 import { parsePart } from '$lib/bangumiUtils';
+import {
+	creatorUnitNames,
+	endsWithJoinerFragment,
+	isJoinerFragment,
+	matchCreatorUnits,
+	resolvePlainStarring,
+	shouldJoinStarring,
+	startsWithJoinerFragment
+} from './artistJoiner';
 import { starringCvNames } from './starringCredit';
 
 export enum Role {
@@ -367,7 +376,12 @@ export class Release {
 	private async assignRelaMap() {
         const allCreators = Array.from(new Set<string>([
             ...Object.values(this.credits).flatMap(Object.keys),
-            // 角色曲老写法（`角色 starring 声优`）
+            // 连接词写法（`A feat. B` / `A × B` / `A & B`）：
+            // 把每个单元也放进解析池，这样两边的人都能各自关联上，
+            // 而显示与 patch 文本仍旧用完整写法。
+            ...creatorUnitNames(this.credits),
+            // 角色曲老写法（`角色 starring 声优`）：声优要像 `(CV.声优)` 那样
+            // 建立关联就得进池子；角色名不进（它是角色，不是人物）。
             ...starringCvNames(this.credits),
         ]));
 		const qr = await queryNameOrAliasBulk(allCreators);
@@ -528,6 +542,24 @@ export class Release {
 			Object.entries(creators).forEach(([creator, pd]) => {
 				// 角色曲老写法（`角色 starring 声优`）
 				const starring = resolvePlainStarring(creator);
+				// 连接词写法（`A feat. B`）
+				const targets: [string, Staff | undefined][] = starring
+					? [[starring.cv, name2staff.get(starring.cv)?.[0]]]
+					: (matchCreatorUnits(creator, name2staff, shouldJoinStarring(creator)) ?? [
+							[creator, name2staff.get(creator)?.[0]]
+						]);
+
+				targets.forEach(([, staff]) => {
+					if (!staff) return;
+					const rtm = r.get(staff.id) ?? new Map<string, number[][]>();
+					let parts = pd.parts;
+					if (rtm.has(roleID)) {
+						// in case of multiple alias, merge parts
+						parts = rtm.get(roleID)!.map((a, i) => Array.from(new Set([...a, ...parts[i]])));
+					}
+					rtm.set(roleID, parts);
+					r.set(staff.id, rtm);
+				});
 			});
 		});
 		const isMultiDisc = this.tracks.length > 1;

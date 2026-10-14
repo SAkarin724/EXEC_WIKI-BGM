@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Release, containsNormalizedName, stripRedundantAlias } from './postprocess';
 	import { Match, type ResolvedRelaMap } from './disambiguation';
+	import { resolveArtistUnits, resolvePlainStarring, shouldJoinStarring } from './artistJoiner';
 	import { orderedEntries } from '$lib/bangumiUtils';
 
 	interface PreviewProps {
@@ -93,6 +94,16 @@
 				representName(starring.cv)
 			];
 		}
+
+		// 连接词写法（`A feat. B` / `A & B` / `A × B`，以及角色名里混进连接词的
+		// 角色曲写法）：连接词按原样显示，单元各自链接
+		const units = resolveArtistUnits(name, name2staff, shouldJoinStarring(name));
+		if (!units) return null;
+
+		return units.flatMap((unit, i) => [
+			...(i > 0 ? [unit.joiner] : []),
+			representName(unit.text)
+		]);
 	}
 </script>
 
@@ -107,7 +118,7 @@
 		{:else if !ni.name}
 			<a href="https://bgm.tv/person/{ni.link.id}">{ni.link.name}</a>
 		{:else if ni.showLinkName === false}
-			{ni.name}
+			<a href="https://bgm.tv/person/{ni.link.id}">{ni.name}</a>
 		{:else}
 			{ni.name} (<a href="https://bgm.tv/person/{ni.link.id}">{ni.link.name}</a>)
 		{/if}
@@ -117,13 +128,24 @@
  -->{#if ni.character}){/if}
 {/snippet}
 
+{#snippet formattedCredit(name: string)}
+	{@const parts = representParts(name)}
+	{#if parts}
+		{#each parts as part}
+			{#if typeof part === 'string'}{part}{:else}{@render formattedName(part)}{/if}
+		{/each}
+	{:else}
+		{@render formattedName(representName(name))}
+	{/if}
+{/snippet}
+
 {#snippet formattedCredits(c: [string, string[]][])}
 	{#each c as [roleID, staffs]}
 		{#if roleID}
 			<div class="font-size-xs">
 				<span class="color-bgm-darkgrey">&#x3000;&#x3000;&#x3000;&#x3000;{roleID}：</span
 				>{#each staffs as name, i}
-					{@render formattedName(representName(name))}{i === staffs.length - 1 ? '' : '、'}
+					{@render formattedCredit(name)}{i === staffs.length - 1 ? '' : '、'}
 				{/each}
 			</div>
 		{/if}

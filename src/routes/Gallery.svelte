@@ -3,6 +3,7 @@
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import { type Staff } from '$lib/db';
 	import { resolveRelaMap, Match } from './disambiguation';
+	import { isComposedName } from './artistJoiner';
 	import { tooltip } from '$lib/Tooltip.svelte';
 
 	interface GalleryProps {
@@ -22,20 +23,24 @@
 	let name2staff = $derived(resolveRelaMap(relaMap, Array.from(dupResolution.entries())));
 
 	let relaEntries = $derived(
-		Array.from(relaMap.keys()).map((name) => {
-			if (removedRela.has(name)) {
-				const firstCodepoint = name[Symbol.iterator]().next().value ?? '';
-				return { name, m: 'removed', pfp: placeHolderSVG(firstCodepoint) };
-			}
-			const [staff, m] = name2staff.get(name)!;
-			if (m === Match.None) {
-				const firstCodepoint = name[Symbol.iterator]().next().value ?? '';
-				return { name, m, pfp: placeHolderSVG(firstCodepoint) };
-			} else if (m === Match.Conflict) {
-				return { name, m, pfp: ambiguitySVG };
-			}
-			return { name, m, pfp: staff.pfp || 'https://lain.bgm.tv/img/no_icon_subject.png' };
-		})
+		Array.from(relaMap.keys())
+			// 连接词 / 角色曲写法的整条名字不可能对应到某个人物，不作为条目出现
+			// （它的各个单元会各自成为条目）
+			.filter((name) => !isComposedName(name))
+			.map((name) => {
+				if (removedRela.has(name)) {
+					const firstCodepoint = name[Symbol.iterator]().next().value ?? '';
+					return { name, m: 'removed', pfp: placeHolderSVG(firstCodepoint) };
+				}
+				const [staff, m] = name2staff.get(name)!;
+				if (m === Match.None) {
+					const firstCodepoint = name[Symbol.iterator]().next().value ?? '';
+					return { name, m, pfp: placeHolderSVG(firstCodepoint) };
+				} else if (m === Match.Conflict) {
+					return { name, m, pfp: ambiguitySVG };
+				}
+				return { name, m, pfp: staff.pfp || 'https://lain.bgm.tv/img/no_icon_subject.png' };
+			})
 	);
 
 	function placeHolderSVG(text: string): string {

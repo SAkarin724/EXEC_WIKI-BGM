@@ -1,5 +1,6 @@
 import { type Release, type Credits } from "$lib/importSource";
-import { RE_ROLE_KEYWORD, pagenoJoin, multiDiscPageNoJoin, Release as FormalRelease } from "./postprocess";
+import { RE_ROLE_KEYWORD, pagenoJoin, multiDiscPageNoJoin, stripRedundantAlias, Release as FormalRelease } from "./postprocess";
+import { matchCreatorUnits, resolvePlainStarring, shouldJoinStarring } from "./artistJoiner";
 import { splitStarringCredit } from "./starringCredit";
 import type { ResolvedRelaMap } from "./disambiguation";
 import { orderedEntries } from "$lib/bangumiUtils";
@@ -96,6 +97,16 @@ export function fromFormalRelease(rf: Readonly<FormalRelease>, name2staff?: Reso
         pushCredit = (credit: Credits, role: string, name: string) => {
             credit[role] = credit[role] ?? [];
             const staff = name2staff.get(name)?.[0];
+            if (staff) {
+                credit[role].push(staff.name);
+                return;
+            }
+            // 连接词写法（`A feat. B` / `A & B`）：整体没有唯一人物可对应，
+            // 但也不该整条丢掉（曲目列表要用完整写法）。
+            if (matchCreatorUnits(name, name2staff, shouldJoinStarring(name))?.some(([, s]) => s)) {
+                credit[role].push(stripRedundantAlias(name));
+                return;
+            }
             
             // 角色曲老写法（`角色 starring 声优`）：声优是人物，角色不是。
             // 声优对得上就按原写法写出，角色名不会因此被关联。

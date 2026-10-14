@@ -77,6 +77,23 @@
 		}
 		return r;
 	}
+
+	/**
+	 * 连接词 / 角色写法拆成多段，让每个已关联的人物各自带链接。
+	 * 复合名字整体在解析池里查不到，只按整条渲染会导致单元有链接却补不上 href。
+	 * 返回 null 表示不是这类写法，按整条名字渲染。
+	 */
+	function representParts(name: string): (NameInfo | string)[] | null {
+		// 角色曲老写法：角色不是人物（一律不链接），只有声优链接
+		const starring = resolvePlainStarring(name);
+		if (starring) {
+			return [
+				{ name: starring.character, isConflict: false },
+				' starring ',
+				representName(starring.cv)
+			];
+		}
+	}
 </script>
 
 {#snippet formattedName(ni: NameInfo)}

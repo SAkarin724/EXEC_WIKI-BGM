@@ -125,7 +125,32 @@ export function fromFormalRelease(rf: Readonly<FormalRelease>, name2staff?: Reso
 }
 
 
+/**
+ * 角色曲的老写法：`中川かのん starring 東山奈央`。
+ *
+ * 语义上和 `中川かのん(CV.東山奈央)` 相同（A 是角色、B 是声优），但**显示形式不同**，
+ * 不能当成 CV 形式写出去。这里只做写法识别并按原样写出：
+ * 角色名 A 绝不作为人物参与关联（它是角色），声优 B 才是人物。
+ */
+export function splitStarringCredit(name: string): { character: string; cv: string } | null {
+    const m = String(name || '').match(/^(.+?)\s+starring\s+(.+)$/i);
+    if (!m) return null;
+
+    const character = m[1].trim();
+    const cv = m[2].trim();
+    if (!character || !cv) return null;
+
+    return { character, cv };
+}
+
 export function nameEscape(n: string): string {
+    // `角色 starring 声优`：只转义角色名，` starring 声优` 留在外面，
+    // 保持这种老写法可读、也能被继续识别
+    const starring = splitStarringCredit(n);
+    if (starring) {
+        return `${nameEscape(starring.character)} starring ${nameEscape(starring.cv)}`;
+    }
+
     if (n.includes('(CV')) {
         const [name, cv] = n.split('(CV', 2);
         return `${nameEscape(name)}(CV${cv.slice(0, 1)}${nameEscape(cv.slice(1, -1))})`;

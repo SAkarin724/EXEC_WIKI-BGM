@@ -128,10 +128,19 @@
 			// Ported from the userscript's `patchExportedJsonString`: attach the
 			// computed patch + policy so the clipboard JSON can be applied directly.
 			const useFullPatch = settingsState.val.defaultFullPatch;
-			const { patchText } = buildSelectivePatch(currentRelease, name2staff, useFullPatch, removedRela);
+			const { patchText, patchContent } = buildSelectivePatch(
+				currentRelease,
+				name2staff,
+				useFullPatch,
+				removedRela
+			);
 			if (patchText) {
 				data.patch = patchText;
 				data.patchPolicy = useFullPatch ? 'full' : 'selective';
+				// 结构化 content：站内脚本可以直接把它提交给 repo，不必再解析 patch 文本。
+				// patch / patchPolicy 依旧保留，方便回退与后续修改。
+				// 新条目的 sid 是 0，这时不带 subjectId，交给站内脚本按实际条目补上。
+				data.patch_content = { ...patchContent, subjectId: sidState.val || undefined };
 			} else {
 				data.patch = '';
 				data.patchPolicy = 'none';

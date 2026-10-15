@@ -1,6 +1,7 @@
 import { type Release, type Credits } from "$lib/importSource";
 import { RE_ROLE_KEYWORD, pagenoJoin, multiDiscPageNoJoin, Role, stripRedundantAlias, Release as FormalRelease } from "./postprocess";
-import { isComposedName, matchCreatorUnits, resolvePlainStarring, shouldJoinStarring } from "./artistJoiner";
+import { hasArtistJoinerSyntax, isComposedName, matchCreatorUnits, resolvePlainStarring, shouldJoinStarring } from "./artistJoiner";
+import { isQuotedCreatorName } from "./nameQuoting";
 import { splitStarringCredit } from "./starringCredit";
 import type { ResolvedRelaMap } from "./disambiguation";
 import { orderedEntries } from "$lib/bangumiUtils";
@@ -101,6 +102,13 @@ export function fromFormalRelease(rf: Readonly<FormalRelease>, name2staff?: Reso
                 credit[role].push(staff.name);
                 return;
             }
+            // 书名号引用（`《A & B》`）：整段是一个名字，原样保留
+            // （写出时 nameEscape 会把书名号加回来）
+            if (isQuotedCreatorName(name)) {
+                credit[role].push(name);
+                return;
+            }
+
             // 连接词写法（`A feat. B` / `A & B`）：整体没有唯一人物可对应，
             // 但也不该整条丢掉（曲目列表要用完整写法）。
             // 艺术家职位才认艺术家专用连接词；开关关掉时按通用分隔拆（回退成普通多名并列）
@@ -168,6 +176,15 @@ export function nameEscape(n: string): string {
     if (alias?.index != null) {
         return `${nameEscape(n.slice(0, alias.index))} (${alias[1]})`;
     }
+    // 书名号引用（`《MK & Kanae Asaba》`）：整段是一个名字。满足原有转义条件
+    // （含会被误读的分隔符、含角色关键字），或含连接词写法（会被连接词层重新拆开）时，
+    // 写出去要把书名号加回去；否则原样写（书名号是语法转义，不是名字的一部分）。
+    if (isQuotedCreatorName(n)) {
+        return hasArtistJoinerSyntax(n) || (RE_SEP.test(n) && !RE_LATIN_SPACE.test(n)) || RE_ROLE_KEYWORD.test(n)
+            ? `《${n}》`
+            : n;
+    }
+
     // 工具自己支持的连接词写法（`藤本記子 & 福富雅之` / `A feat. B` / `角色 starring 声优`）
     // 不进书名号：它们能被正确拆成单元，不属于「无法判断是否被错误分割」的情形。
     // 但名字里同时有关键字（`作編曲` 之类）时仍然要括——那种才是真的会被当成制作人员行。

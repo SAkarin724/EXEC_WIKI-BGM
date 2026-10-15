@@ -5,9 +5,11 @@ import { type RawRelease, RawTrack, type CreditField } from './lang-rkgk';
 import { queryNameOrAliasBulk, type Staff } from '$lib/db';
 import { type ResolvedRelaMap } from './disambiguation';
 import { parsePart } from '$lib/bangumiUtils';
+import { beginQuotedCreatorNames, isQuotedCreatorName, markQuotedCreatorName } from './nameQuoting';
 import {
 	creatorUnitNames,
 	endsWithJoinerFragment,
+	hasArtistJoinerSyntax,
 	isJoinerFragment,
 	matchCreatorUnits,
 	resolveArtistUnits,
@@ -297,6 +299,8 @@ export class Release {
 		}
 
 		const name2character = new Map<string, [string, string]>();
+		// 本次解析的《》引用登记表从空开始（下面的解析全是同步的，整段一次填完）
+		beginQuotedCreatorNames();
 		const credits = _parseSongCredit(raw.credits, name2character);
 		const all_tracks = raw.discs.map((disc, i) => {
 			// normalize track titles, then coalesce empty titles
@@ -784,8 +788,16 @@ function parseSongCredit(
 	let roleIDs = new Set<string>();
 	let lastPersonData: PersonData[] | null = null; // role: creator(parts), ...
 	let lastRoleParts: [number, number][] | null = null; // role(parts): creator
+	// 处于《》之间（`《A & B》`）：中间整段是一个名字，登记下来供连接词层跳过拆分
+	let pendingQuoted = false;
     cfs_.forEach(cf => {
 		switch (cf.type) {
+            case "《":
+				pendingQuoted = true;
+				break;
+            case "》":
+				pendingQuoted = false;
+				break;
             case "role":
 				if (lastPersonData) {
 					roleIDs.clear();
@@ -815,6 +827,7 @@ function parseSongCredit(
                     name = name.replace(/[(（].+[）)]$/, "").trim();
 					if (!name) break; // don't include "trimmed circle"
 				}
+				if (pendingQuoted) markQuotedCreatorName(name);
                 lastPersonData = Array.from(roleIDs).map(rid => {
                     const rs = credits[rid] = credits[rid] || {};
                     return rs[name] = rs[name] || new PersonData();

@@ -181,10 +181,15 @@ const SEMANTIC_TYPES = [
     "parts",
     "title",
     "comment",
+    // 书名号：语法层始终成对出现（`《` + creator + `》`），中间整段是一个整体名字。
+    // 不带下来就无从判断一个名字是「被括起来、不许拆」还是普通的连接词写法。
+    "《",
+    "》",
 ];
 
 export interface CreditField {
-    type: "role" | "creator" | "creatorSeparator" | "cv_conj" | "parts";
+    /** `《` / `》` = 书名号引用的开闭标记（中间整段是一个不可拆的名字） */
+    type: "role" | "creator" | "creatorSeparator" | "cv_conj" | "parts" | "《" | "》";
     value: string;
 }
 
@@ -238,20 +243,24 @@ function intoRawDisc(root: NodeInfo): RawDisc {
 function intoRawTrack(node: NodeInfo): RawTrack {
     const track: RawTrack = new RawTrack();
     track.line = node.startRow + 1; // 1-based line number for editor locating
-    if (node.children.length > 0 && node.children[0].type === "title") {
-        track.title = node.children.shift()!.text;
-    } else {
-        console.warn(`Track node does not start with title: ${node.text} type: ${node.type}`);
+    // 逐个子节点判类型，不假设顺序：书名号引用（`《曲目名》`）会让 `title` 前多出 `《`/`》` 标记
+    const rest: NodeInfo[] = [];
+    for (const child of node.children) {
+        if (child.type === "title" && !track.title) {
+            track.title = child.text;
+        } else if (child.type === "comment" && !track.comment) {
+            track.comment = child.text.trim();
+        } else if (child.type === "credit_block") {
+            track.credits.push(...intoCredits(child.children));
+        } else if (child.type !== "《" && child.type !== "》") {
+            rest.push(child);
+        }
     }
-    if (node.children.length > 0 && node.children[0].type === "comment") {
-        track.comment = node.children.shift()!.text.trim();
+    if (!track.title) {
+        console.warn(`Track node does not have title: ${node.type} ${node.text}`);
     }
-    if (node.children.length > 0 && node.children[0].type === "credit_block") {
-        track.credits.push(...intoCredits(node.children.shift()!.children));
-    }
-    if (node.children.length > 0) {
-        const unk = node.children.shift()!;
-        console.warn(`Track node has unknown children: ${unk.type} ${unk.text}`);
+    if (rest.length > 0) {
+        console.warn(`Track node has unknown children: ${rest.map((c) => `${c.type} ${c.text}`).join(" | ")}`);
     }
     return track;
 }

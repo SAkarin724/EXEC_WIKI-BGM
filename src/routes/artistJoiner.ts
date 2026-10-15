@@ -12,7 +12,8 @@
  */
 import { type Staff } from '$lib/db';
 import { type ResolvedRelaMap } from './disambiguation';
-import { STARRING_WORD, splitStarringCredit } from './starringCredit';
+import { isQuotedCreatorName } from './nameQuoting';
+import { RE_STARRING, STARRING_WORD, splitStarringCredit } from './starringCredit';
 
 export const ARTIST_JOINERS = ['feat.', 'ft', 'fw', 'vs', '+', 'with', '&', '×'];
 
@@ -83,6 +84,26 @@ export function splitArtistUnits(
 	raw: string,
 	includeStarring = false,
 	includeArtistOnly = true
+): ArtistUnit[] | null {
+	const text = String(raw || '');
+	if (!text.trim()) return null;
+
+	// 书名号引用（`《A & B》`）：整段是一个名字，任何连接词都不拆。
+	// （`resolveArtistUnits` / `matchCreatorUnits` / `creatorUnitNames` / `isComposedName`
+	//   都经由这里，所以这一处就够。）
+	if (isQuotedCreatorName(text)) return null;
+
+	return splitArtistUnitsRaw(text, includeStarring, includeArtistOnly);
+}
+
+/**
+ * 不看《》登记的原始拆分（内部用）。
+ * `hasArtistJoinerSyntax` 靠它回答「这个名字写出去时会不会被连接词层重新拆开」。
+ */
+function splitArtistUnitsRaw(
+	raw: string,
+	includeStarring: boolean,
+	includeArtistOnly: boolean
 ): ArtistUnit[] | null {
 	const text = String(raw || '');
 	if (!text.trim()) return null;
@@ -211,6 +232,19 @@ export function shouldJoinStarring(name: string): boolean {
  */
 export function isComposedName(name: string): boolean {
 	return Boolean(resolvePlainStarring(name) || splitArtistUnits(name, shouldJoinStarring(name)));
+}
+
+/**
+ * 名字里带连接词 / 角色曲写法吗（`A & B` / `A feat. B` / `角色 starring 声优`）。
+ *
+ * 不看《》登记：用来判断一个书名号引用的名字**写出去时要不要重新加书名号**。
+ * 书名号是给下游（维基端 / 再次导入工具）看的语法转义，内容本来不会被拆开时就不必加。
+ */
+export function hasArtistJoinerSyntax(name: string): boolean {
+	const text = String(name || '');
+	if (!text.trim()) return false;
+
+	return Boolean(RE_STARRING.test(text) || splitArtistUnitsRaw(text, false, true));
 }
 
 /* ------------------------------------------------------------------

@@ -82,7 +82,14 @@ export class TreeSitterParser extends lezer.Parser {
         if (cursor.gotoFirstChild()) {
             do {
                 const { root: child, leaves: childLeaves } = this.traverse(cursor);
-                if ((child.children.length > 0 && child.type !== 'ERROR') || this.semanticTypes.has(child.type)) {
+                // 书名号标记（`《` / `》`）只在 credit_field 里有意义：它表示中间整段是一个
+                // 不可拆的名字。曲目名的书名号不必带上来（`intoRawTrack` 只认 title/comment/
+                // credit_block，多出来的标记反而会打乱按顺序取标题的老写法）。
+                const quotedMark = child.type === '《' || child.type === '》';
+                const keep = quotedMark
+                    ? self.type === 'credit_field'
+                    : (child.children.length > 0 && child.type !== 'ERROR') || this.semanticTypes.has(child.type);
+                if (keep) {
                     self.children.push(child);
                 }
                 leaves.push(...childLeaves);

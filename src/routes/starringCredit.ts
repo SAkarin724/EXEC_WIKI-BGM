@@ -8,11 +8,19 @@
  * 都要用它，放在任何一边都会让两个模块互相 import。
  */
 
+import { isQuotedCreatorName } from './nameQuoting';
+
 export const STARRING_WORD = 'starring';
+
+/** `角色 starring 声优` 的形状（不看《》登记，供「要不要加书名号」判断用） */
+export const RE_STARRING = /^(.+?)\s+starring\s+(.+)$/i;
 
 /** `中川かのん starring 東山奈央` -> { character: '中川かのん', cv: '東山奈央' } */
 export function splitStarringCredit(name: string): { character: string; cv: string } | null {
-	const m = String(name || '').match(/^(.+?)\s+starring\s+(.+)$/i);
+	// 书名号引用（`《A starring B》`）整段是一个名字，不按角色曲写法拆
+	if (isQuotedCreatorName(name)) return null;
+
+	const m = String(name || '').match(RE_STARRING);
 	if (!m) return null;
 
 	const character = m[1].trim();

@@ -1,6 +1,6 @@
 import { type Release, type Credits } from "$lib/importSource";
 import { RE_ROLE_KEYWORD, pagenoJoin, multiDiscPageNoJoin, stripRedundantAlias, Release as FormalRelease } from "./postprocess";
-import { matchCreatorUnits, resolvePlainStarring, shouldJoinStarring } from "./artistJoiner";
+import { isComposedName, matchCreatorUnits, resolvePlainStarring, shouldJoinStarring } from "./artistJoiner";
 import { splitStarringCredit } from "./starringCredit";
 import type { ResolvedRelaMap } from "./disambiguation";
 import { orderedEntries } from "$lib/bangumiUtils";
@@ -161,6 +161,11 @@ export function nameEscape(n: string): string {
     if (alias?.index != null) {
         return `${nameEscape(n.slice(0, alias.index))} (${alias[1]})`;
     }
+    // 工具自己支持的连接词写法（`藤本記子 & 福富雅之` / `A feat. B` / `角色 starring 声优`）
+    // 不进书名号：它们能被正确拆成单元，不属于「无法判断是否被错误分割」的情形。
+    // 但名字里同时有关键字（`作編曲` 之类）时仍然要括——那种才是真的会被当成制作人员行。
+    if (isComposedName(n) && !RE_ROLE_KEYWORD.test(n)) return n;
+
     return ((RE_SEP.test(n) && !RE_LATIN_SPACE.test(n)) || RE_ROLE_KEYWORD.test(n)) ? `《${n}》` : n;
 }
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Release, containsNormalizedName, stripRedundantAlias } from './postprocess';
+	import { Release, Role, containsNormalizedName, stripRedundantAlias } from './postprocess';
 	import { Match, type ResolvedRelaMap } from './disambiguation';
 	import { resolveArtistUnits, resolvePlainStarring, shouldJoinStarring } from './artistJoiner';
 	import { orderedEntries } from '$lib/bangumiUtils';
@@ -84,7 +84,15 @@
 	 * 复合名字整体在解析池里查不到，只按整条渲染会导致单元有链接却补不上 href。
 	 * 返回 null 表示不是这类写法，按整条名字渲染。
 	 */
-	function representParts(name: string): (NameInfo | string)[] | null {
+	function representParts(name: string, allowComposed = true): (NameInfo | string)[] | null {
+		// 艺术家开关关掉时：回退成普通多名并列（`MK、Kanae Asaba (浅場佳苗)`），
+		// 即不再用连接词写法，但名字照样按单元拆开渲染
+		if (!allowComposed) {
+			const list = resolveArtistUnits(name, name2staff, shouldJoinStarring(name));
+			if (!list) return null;
+			return list.flatMap((u, i) => [...(i > 0 ? ['、'] : []), representName(u.text)]);
+		}
+
 		// 角色曲老写法：角色不是人物（一律不链接），只有声优链接
 		const starring = resolvePlainStarring(name);
 		if (starring) {
@@ -128,8 +136,8 @@
  -->{#if ni.character}){/if}
 {/snippet}
 
-{#snippet formattedCredit(name: string)}
-	{@const parts = representParts(name)}
+{#snippet formattedCredit(name: string, allowComposed: boolean = true)}
+	{@const parts = representParts(name, allowComposed)}
 	{#if parts}
 		{#each parts as part}
 			{#if typeof part === 'string'}{part}{:else}{@render formattedName(part)}{/if}
@@ -145,7 +153,10 @@
 			<div class="font-size-xs">
 				<span class="color-bgm-darkgrey">&#x3000;&#x3000;&#x3000;&#x3000;{roleID}：</span
 				>{#each staffs as name, i}
-					{@render formattedCredit(name)}{i === staffs.length - 1 ? '' : '、'}
+					{@render formattedCredit(name, roleID === Role.V ? release.useArtistJoiner : true)}{i ===
+					staffs.length - 1
+						? ''
+						: '、'}
 				{/each}
 			</div>
 		{/if}

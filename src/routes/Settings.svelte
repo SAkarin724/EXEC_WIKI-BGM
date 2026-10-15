@@ -9,6 +9,8 @@
 		useOriginalSplitRolesFormat: boolean;
 		defaultOpenBGMNewAfterPack: boolean;
 		defaultFullPatch: boolean;
+		/** 艺术家职位是否启用连接词规则（feat. / ft / fw / vs / with）；关掉后其他职位仍按 & / × / + 处理 */
+		useArtistJoiner: boolean;
 	}
 	export const defaultSettings: Settings = {
 		bgmUID: '',
@@ -36,7 +38,8 @@
 		shouldAutofillArrangment: true,
 		useOriginalSplitRolesFormat: false,
 		defaultOpenBGMNewAfterPack: false,
-		defaultFullPatch: true
+		defaultFullPatch: true,
+		useArtistJoiner: true
 	};
 </script>
 
@@ -100,6 +103,11 @@
 			id: 'useOriginalSplitRolesFormat',
 			text: '使用原版乐器职位构造方式',
 			hint: '原版功能构造格式：|乐器= 创作者1 (乐器1)、创作者2 (乐器2)（乐器/设计/插图通用）'
+		},
+		{
+			id: 'useArtistJoiner',
+			text: '艺术家职位按连接词写法拆分（feat. / ft / fw / vs / with / & / × / +）',
+			hint: '关掉后艺术家的连接词写法整条保留；其他职位始终只按 & / × / + 这类通用分隔处理，关联不受影响'
 		}
 	];
 	const uiSettings = [

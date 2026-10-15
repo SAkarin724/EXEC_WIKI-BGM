@@ -10,11 +10,12 @@ import {
 	endsWithJoinerFragment,
 	isJoinerFragment,
 	matchCreatorUnits,
+	resolveArtistUnits,
 	resolvePlainStarring,
 	shouldJoinStarring,
 	startsWithJoinerFragment
 } from './artistJoiner';
-import { starringCvNames } from './starringCredit';
+import { STARRING_WORD, starringCvNames } from './starringCredit';
 
 export enum Role {
     undef = "",
@@ -414,8 +415,8 @@ export class Release {
                 displayRoleName(roleID),  // convert Role name
 				Object.entries(creators)
 					.sort(([a, _], [b, __]) => fa[a] - fa[b])
-					// Infobox 走专用版本：去掉已经包含在名字里的冗余别名标注
-					.map(([c, _]) => this.formatCreatorForInfobox(c, name2staff.get(c)?.[0]?.name))
+					// Infobox 走专用版本：逐单元补 `别名 (现名)`、去掉已含在名字里的冗余标注
+					.map(([c, _]) => this.formatCreatorForInfobox(c, name2staff.get(c)?.[0]?.name, name2staff))
 			] as [string, string[]];
 		});
 		const rsc = this.coalesceInstrumentalRoles(rs);
@@ -424,7 +425,45 @@ export class Release {
         return rsc.concat(Array.from(emptyRoles).map(roleID => [roleID, []]));
 	}
 
-	formatCreator(name: string, primaryName: string | undefined): string {
+	/**
+	 * 复合写法按单元各自格式化，与预览端（Preview.svelte 逐单元渲染）保持一致。
+	 *
+	 * 不这么做的话，`别名 (现名)` 会被判在「整条名字」粒度上：整条 `MK & Kanae Asaba`
+	 * 里没有现名 `浅場佳苗`（它只出现在单元 `Kanae Asaba` 上），判据与单元粒度不一致，
+	 * 于是预览补、Infobox 漏。整条补同样不对——某个成员的现名会被挂到整条末尾。
+	 *
+	 * 返回 null 表示不是复合写法，按整条处理。
+	 */
+	private formatComposedParts(
+		name: string,
+		formatUnit: (unit: string, staffName: string | undefined) => string,
+		name2staff?: ResolvedRelaMap
+	): string | null {
+		// 角色曲老写法：角色不是人物（不补现名），只有声优补
+		const starring = resolvePlainStarring(name);
+		if (starring) {
+			return `${starring.character} ${STARRING_WORD} ${formatUnit(
+				starring.cv,
+				name2staff?.get(starring.cv)?.[0]?.name
+			)}`;
+		}
+
+		const units = name2staff ? resolveArtistUnits(name, name2staff, shouldJoinStarring(name)) : null;
+		if (!units) return null;
+
+		return units
+			.map((unit, i) => (i > 0 ? unit.joiner : '') + formatUnit(unit.text, unit.staff?.name))
+			.join('');
+	}
+
+	formatCreator(name: string, primaryName: string | undefined, name2staff?: ResolvedRelaMap): string {
+		const composed = this.formatComposedParts(
+			name,
+			(unit, staffName) => this.formatCreator(unit, staffName, name2staff),
+			name2staff
+		);
+		if (composed !== null) return composed;
+
 		let r = name;
 		if (primaryName && name !== primaryName) {
 			r = `${name} (${primaryName})`;
@@ -441,11 +480,17 @@ export class Release {
 	 * Infobox 专用版的 formatCreator：`名字 (主名)` 只为帮 bgm 关联到本人，
 	 * 主名已经出现在名字里时（ぐぅせぇguse、Masahiro "Godspeed" Aoki）纯属冗余，去掉。
 	 *
-	 * 刻意与 formatCreator 分开：patch 文本（patchExport）与曲目数据
-	 * （trackInfoWriter.fromFormalRelease）仍走原版、原样保留别名标注，
+	 * 刻意与 formatCreator 分开：patch 文本（patchExport）原样保留这类冗余标注，
 	 * 维基端组件的识别依赖它——两边不要合并。预览（Preview.svelte）复用同一组函数。
 	 */
-	formatCreatorForInfobox(name: string, primaryName: string | undefined): string {
+	formatCreatorForInfobox(name: string, primaryName: string | undefined, name2staff?: ResolvedRelaMap): string {
+		const composed = this.formatComposedParts(
+			name,
+			(unit, staffName) => this.formatCreatorForInfobox(unit, staffName, name2staff),
+			name2staff
+		);
+		if (composed !== null) return composed;
+
 		let r = stripRedundantAlias(name);
 		if (primaryName && !containsNormalizedName(r, primaryName)) {
 			r = `${r} (${primaryName})`;

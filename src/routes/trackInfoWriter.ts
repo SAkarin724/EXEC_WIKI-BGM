@@ -1,5 +1,5 @@
 import { type Release, type Credits } from "$lib/importSource";
-import { RE_ROLE_KEYWORD, pagenoJoin, multiDiscPageNoJoin, stripRedundantAlias, Release as FormalRelease } from "./postprocess";
+import { RE_ROLE_KEYWORD, pagenoJoin, multiDiscPageNoJoin, Role, stripRedundantAlias, Release as FormalRelease } from "./postprocess";
 import { isComposedName, matchCreatorUnits, resolvePlainStarring, shouldJoinStarring } from "./artistJoiner";
 import { splitStarringCredit } from "./starringCredit";
 import type { ResolvedRelaMap } from "./disambiguation";
@@ -103,7 +103,14 @@ export function fromFormalRelease(rf: Readonly<FormalRelease>, name2staff?: Reso
             }
             // 连接词写法（`A feat. B` / `A & B`）：整体没有唯一人物可对应，
             // 但也不该整条丢掉（曲目列表要用完整写法）。
-            if (matchCreatorUnits(name, name2staff, shouldJoinStarring(name))?.some(([, s]) => s)) {
+            // 艺术家职位才认艺术家专用连接词；开关关掉时按通用分隔拆（回退成普通多名并列）
+            const units = matchCreatorUnits(
+                name,
+                name2staff,
+                shouldJoinStarring(name),
+                role === Role.V && rf.useArtistJoiner
+            );
+            if (units?.some(([, s]) => s)) {
                 credit[role].push(stripRedundantAlias(name));
                 return;
             }

@@ -216,6 +216,11 @@ export interface PostProcessOptions {
 	allowAllSpaceInCreatorName: boolean;
 	shouldAutofillArrangment: boolean;
 	useOriginalSplitRolesFormat: boolean;
+	/**
+	 * 艺术家职位是否启用连接词规则（`feat. / ft / fw / vs / with` 这些艺术家专用写法）。
+	 * 关掉后艺术家的连接词写法整条保留；其他职位始终只按 `& / × / +` 这类通用分隔处理。
+	 */
+	useArtistJoiner?: boolean;
 }
 
 class PersonData {
@@ -269,6 +274,7 @@ export class Release {
 	name2character: Map<string, [string, string]>;
 	relaMap: Map<string, Staff[]> = new Map();
 	useOriginalSplitRolesFormat: boolean = false;
+	useArtistJoiner: boolean = true;
 	constructor(
 		credits?: Credits,
 		tracks?: Track[][],
@@ -279,6 +285,7 @@ export class Release {
 		this.tracks = tracks || [];
 		this.name2character = name2character || new Map();
 		this.useOriginalSplitRolesFormat = options?.useOriginalSplitRolesFormat ?? false;
+		this.useArtistJoiner = options?.useArtistJoiner ?? true;
 	}
 	static async fromRawRelease(raw: RawRelease, options: PostProcessOptions): Promise<Release> {
 		function _parseSongCredit(cfs: CreditField[], name2character: Map<string, [string, string]>) {
@@ -380,7 +387,7 @@ export class Release {
             // 连接词写法（`A feat. B` / `A × B` / `A & B`）：
             // 把每个单元也放进解析池，这样两边的人都能各自关联上，
             // 而显示与 patch 文本仍旧用完整写法。
-            ...creatorUnitNames(this.credits),
+            ...creatorUnitNames(this.credits, { artistRole: Role.V, useArtistJoiners: this.useArtistJoiner }),
             // 角色曲老写法（`角色 starring 声优`）：声优要像 `(CV.声优)` 那样
             // 建立关联就得进池子；角色名不进（它是角色，不是人物）。
             ...starringCvNames(this.credits),
@@ -411,13 +418,36 @@ export class Release {
 
 		const rs = Object.entries(this.credits).map(([roleID, creators]) => {
             const fa = Object.fromEntries(Object.entries(creators).map(([c, { parts }]) => [c, firstAppear(parts)]));
-			return [
-                displayRoleName(roleID),  // convert Role name
-				Object.entries(creators)
-					.sort(([a, _], [b, __]) => fa[a] - fa[b])
-					// Infobox 走专用版本：逐单元补 `别名 (现名)`、去掉已含在名字里的冗余标注
-					.map(([c, _]) => this.formatCreatorForInfobox(c, name2staff.get(c)?.[0]?.name, name2staff))
-			] as [string, string[]];
+			// 艺术家职位开关开着时保留连接词写法（`MK & Kanae Asaba`）；
+			// 关掉后与其他职位一样展开成单元（回退成普通多名并列 `MK、Kanae Asaba`），
+			// 否则 `福富雅之(1,2,4,5)` 与 `藤本記子 & 福富雅之(3)` 会让 Infobox 里重复出现同一个名字。
+			const isArtist = roleID === Role.V;
+			const keepComposed = isArtist && this.useArtistJoiner;
+			const seen = new Set<string>();
+			const names: string[] = [];
+
+			Object.entries(creators)
+				.sort(([a, _], [b, __]) => fa[a] - fa[b])
+				.forEach(([c, _]) => {
+					const entries: [string, string | undefined][] = keepComposed
+						? [[c, name2staff.get(c)?.[0]?.name]]
+						: this.expandCreatorUnits(c, name2staff);
+
+					entries.forEach(([unit, staffName]) => {
+						// Infobox 走专用版本：逐单元补 `别名 (现名)`、去掉已含在名字里的冗余标注
+						const formatted = this.formatCreatorForInfobox(
+							unit,
+							staffName,
+							name2staff,
+							keepComposed
+						);
+						if (seen.has(formatted)) return;
+						seen.add(formatted);
+						names.push(formatted);
+					});
+				});
+
+			return [displayRoleName(roleID), names] as [string, string[]];
 		});
 		const rsc = this.coalesceInstrumentalRoles(rs);
         const emptyRoles = new Set<string>(Object.values(Role).slice(1))
@@ -437,8 +467,12 @@ export class Release {
 	private formatComposedParts(
 		name: string,
 		formatUnit: (unit: string, staffName: string | undefined) => string,
-		name2staff?: ResolvedRelaMap
+		name2staff?: ResolvedRelaMap,
+		allowComposed = true
 	): string | null {
+		// 艺术家开关关掉时：连接词写法整条保留，不做逐单元处理
+		if (!allowComposed) return null;
+
 		// 角色曲老写法：角色不是人物（不补现名），只有声优补
 		const starring = resolvePlainStarring(name);
 		if (starring) {
@@ -456,11 +490,28 @@ export class Release {
 			.join('');
 	}
 
-	formatCreator(name: string, primaryName: string | undefined, name2staff?: ResolvedRelaMap): string {
+	/**
+	 * 把连接词写法拆成单元，供 Infobox 的非艺术家职位使用。
+	 * 刻意不展开 `角色 starring 声优`：那是显示形式，Infobox 里要原样保留。
+	 */
+	private expandCreatorUnits(name: string, name2staff?: ResolvedRelaMap): [string, string | undefined][] {
+		const units = name2staff ? resolveArtistUnits(name, name2staff, shouldJoinStarring(name)) : null;
+		if (units) return units.map((u) => [u.text, u.staff?.name]);
+
+		return [[name, name2staff?.get(name)?.[0]?.name]];
+	}
+
+	formatCreator(
+		name: string,
+		primaryName: string | undefined,
+		name2staff?: ResolvedRelaMap,
+		allowComposed = true
+	): string {
 		const composed = this.formatComposedParts(
 			name,
-			(unit, staffName) => this.formatCreator(unit, staffName, name2staff),
-			name2staff
+			(unit, staffName) => this.formatCreator(unit, staffName, name2staff, allowComposed),
+			name2staff,
+			allowComposed
 		);
 		if (composed !== null) return composed;
 
@@ -483,11 +534,17 @@ export class Release {
 	 * 刻意与 formatCreator 分开：patch 文本（patchExport）原样保留这类冗余标注，
 	 * 维基端组件的识别依赖它——两边不要合并。预览（Preview.svelte）复用同一组函数。
 	 */
-	formatCreatorForInfobox(name: string, primaryName: string | undefined, name2staff?: ResolvedRelaMap): string {
+	formatCreatorForInfobox(
+		name: string,
+		primaryName: string | undefined,
+		name2staff?: ResolvedRelaMap,
+		allowComposed = true
+	): string {
 		const composed = this.formatComposedParts(
 			name,
-			(unit, staffName) => this.formatCreatorForInfobox(unit, staffName, name2staff),
-			name2staff
+			(unit, staffName) => this.formatCreatorForInfobox(unit, staffName, name2staff, allowComposed),
+			name2staff,
+			allowComposed
 		);
 		if (composed !== null) return composed;
 
@@ -587,12 +644,16 @@ export class Release {
 			Object.entries(creators).forEach(([creator, pd]) => {
 				// 角色曲老写法（`角色 starring 声优`）
 				const starring = resolvePlainStarring(creator);
-				// 连接词写法（`A feat. B`）
+				// 连接词写法（`A feat. B`）：艺术家职位才认艺术家专用连接词（受开关控制）；
+				// 关掉时回退成通用分隔（`& / × / +`），其他职位同样只认通用分隔
 				const targets: [string, Staff | undefined][] = starring
 					? [[starring.cv, name2staff.get(starring.cv)?.[0]]]
-					: (matchCreatorUnits(creator, name2staff, shouldJoinStarring(creator)) ?? [
-							[creator, name2staff.get(creator)?.[0]]
-						]);
+					: (matchCreatorUnits(
+							creator,
+							name2staff,
+							shouldJoinStarring(creator),
+							roleID === Role.V && this.useArtistJoiner
+						) ?? [[creator, name2staff.get(creator)?.[0]]]);
 
 				targets.forEach(([, staff]) => {
 					if (!staff) return;

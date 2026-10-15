@@ -46,6 +46,16 @@ const RE_TIGHT_SPACED = new RegExp(`^\\s+((?:${TIGHT_BODY})\\.?)\\s+`, 'i');
 const RE_WORD_SPACED_STARRING = new RegExp(`^\\s+((?:${WORD_BODY_WITH_STARRING})\\.?)\\s*`, 'i');
 const RE_WORD_AFTER_PAREN_STARRING = new RegExp(`^((?:${WORD_BODY_WITH_STARRING})\\.?)\\s*`, 'i');
 
+/**
+ * 「不启用艺术家专用连接词」时使用（非 `Role.V` 职位、或艺术家开关关掉）：
+ * `feat. / ft / fw / vs / with` 一律不当连接词，只保留 `& / × / +` 这类通用分隔。
+ * 用永不匹配的正则把它摘掉，其余流程不动。
+ */
+const RE_NEVER = /(?!)/;
+/** 只认 `starring` 的变体（角色曲老写法在非艺术家职位上仍然要拆） */
+const RE_STARRING_SPACED = new RegExp(`^\\s+(${escapeRe(STARRING_WORD)})\\s*`, 'i');
+const RE_STARRING_AFTER_PAREN = new RegExp(`^(${escapeRe(STARRING_WORD)})\\s*`, 'i');
+
 export interface ArtistUnit {
 	/** 该单元前面的连接词，归一为 ` xxx ` 形式；第一个单元为空串 */
 	joiner: string;
@@ -64,13 +74,33 @@ export interface ResolvedArtistUnit extends ArtistUnit {
  *
  * `includeStarring` 为 true 时把 `starring` 也当词形连接词一起拆
  * （只用于角色曲写法里混进连接词的罕见情况，见 `shouldJoinStarring`）。
+ *
+ * `includeArtistOnly` 为 false 时只按通用分隔符（`& / × / +`）拆，
+ * `feat. / ft / fw / vs / with` 一律不当连接词——用于非 `Role.V` 职位、
+ * 或艺术家开关关掉时（`starring` 仍按 `includeStarring` 生效）。
  */
-export function splitArtistUnits(raw: string, includeStarring = false): ArtistUnit[] | null {
+export function splitArtistUnits(
+	raw: string,
+	includeStarring = false,
+	includeArtistOnly = true
+): ArtistUnit[] | null {
 	const text = String(raw || '');
 	if (!text.trim()) return null;
 
-	const reWordSpaced = includeStarring ? RE_WORD_SPACED_STARRING : RE_WORD_SPACED;
-	const reWordAfterParen = includeStarring ? RE_WORD_AFTER_PAREN_STARRING : RE_WORD_AFTER_PAREN;
+	const reWordSpaced = includeArtistOnly
+		? includeStarring
+			? RE_WORD_SPACED_STARRING
+			: RE_WORD_SPACED
+		: includeStarring
+			? RE_STARRING_SPACED
+			: RE_NEVER;
+	const reWordAfterParen = includeArtistOnly
+		? includeStarring
+			? RE_WORD_AFTER_PAREN_STARRING
+			: RE_WORD_AFTER_PAREN
+		: includeStarring
+			? RE_STARRING_AFTER_PAREN
+			: RE_NEVER;
 
 	const units: ArtistUnit[] = [];
 	let buf = '';
@@ -128,9 +158,10 @@ export function splitArtistUnits(raw: string, includeStarring = false): ArtistUn
 export function resolveArtistUnits(
 	name: string,
 	name2staff: ResolvedRelaMap,
-	includeStarring = false
+	includeStarring = false,
+	includeArtistOnly = true
 ): ResolvedArtistUnit[] | null {
-	const units = splitArtistUnits(name, includeStarring);
+	const units = splitArtistUnits(name, includeStarring, includeArtistOnly);
 	if (!units) return null;
 
 	return units.map((u) => ({ ...u, staff: name2staff.get(u.text)?.[0] }));
@@ -143,9 +174,10 @@ export function resolveArtistUnits(
 export function matchCreatorUnits(
 	name: string,
 	name2staff: ResolvedRelaMap,
-	includeStarring = false
+	includeStarring = false,
+	includeArtistOnly = true
 ): [string, Staff | undefined][] | null {
-	const units = splitArtistUnits(name, includeStarring);
+	const units = splitArtistUnits(name, includeStarring, includeArtistOnly);
 	if (!units) return null;
 
 	return units.map((u) => [u.text, name2staff.get(u.text)?.[0]]);
@@ -216,17 +248,28 @@ export function startsWithJoinerFragment(v: string): boolean {
 }
 
 /**
- * 收集所有职位下、连接词写法需要单独解析的单元。
+ * 收集连接词写法需要单独解析的单元。
  *
- * 不限职位：粘连与拆分对任意职位都生效（与维基端一致），
- * 单元不进解析池的话，那种写法在界面上会变成一个既无法匹配、又无处操作的整条名字。
+ * 传了 `opts.artistRole`（艺术家职位名）时按职位分流：该职位看 `opts.useArtistJoiners`
+ * —— 关掉就不收集它的单元；其余职位只按通用分隔符（`& / × / +`）拆。
+ * 不传 `opts` 时保持旧行为（所有职位都按完整连接词表拆）。
  */
-export function creatorUnitNames(credits: Record<string, Record<string, unknown>>): string[] {
+export function creatorUnitNames(
+	credits: Record<string, Record<string, unknown>>,
+	opts?: { artistRole?: string; useArtistJoiners?: boolean }
+): string[] {
 	const names: string[] = [];
 
-	Object.values(credits).forEach((creators) => {
+	Object.entries(credits).forEach(([role, creators]) => {
+		const isArtist = opts?.artistRole !== undefined && role === opts.artistRole;
+		// 艺术家开关关掉时只是不再认艺术家专用连接词（仍按 `& / × / +` 拆，单元照样进池）
+		const includeArtistOnly =
+			opts?.artistRole === undefined ? true : isArtist && (opts.useArtistJoiners ?? true);
+
 		Object.keys(creators).forEach((creator) => {
-			splitArtistUnits(creator, shouldJoinStarring(creator))?.forEach((u) => names.push(u.text));
+			splitArtistUnits(creator, shouldJoinStarring(creator), includeArtistOnly)?.forEach((u) =>
+				names.push(u.text)
+			);
 		});
 	});
 

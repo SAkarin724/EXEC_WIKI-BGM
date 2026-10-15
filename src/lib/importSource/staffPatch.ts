@@ -219,7 +219,8 @@ function parseEditorText(editor: string): ParsedCredits {
 // 回退路径：当没有 rawPatches.editor 时，从结构化 trackCredits / epinfo 还原
 // ---------------------------------------------------------------------------
 
-const PATCH_ROLE_TO_BGM: Record<string, string> = {
+/** roleKey -> BGM 职位名。写入侧（生成 patch_content）用它的反查表。 */
+export const PATCH_ROLE_TO_BGM: Record<string, string> = {
 	artist: "艺术家",
 	lyricist: "作词",
 	composer: "作曲",

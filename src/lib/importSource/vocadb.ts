@@ -1,7 +1,7 @@
 // See https://wiki.vocadb.net/docs/development/public-api
 // TouhouDB and UtaiteDB are using the same API.
 import type { ImportSource, AutoEditor, Disc } from "./common";
-import { DefaultDict, warningTemplate3rdPartyWiki, formatDuration } from "./common";
+import { DefaultDict, warningTemplate3rdPartyWiki, buildDurationValue } from "./common";
 
 export class VocaDB implements ImportSource {
     name = "VocaDB / UtaiteDB / TouhouDB";
@@ -70,8 +70,22 @@ export class VocaDB implements ImportSource {
 
         if (opts.length) {
             const { tracks } = (await this.albumInfo)!;
-            const timeSecs = tracks.flatMap(({ song }) => song.lengthSeconds).reduce((a, b) => a + b, 0);
-            editor.setInfoBoxField("播放时长", formatDuration(timeSecs));
+            // 按 discNumber 汇总；任一曲缺时长就认为该碟时长不可用
+            const byDisc = new Map<number, number>();
+            let complete = tracks.length > 0;
+            tracks.forEach((track) => {
+                const sec = track.song?.lengthSeconds;
+                if (typeof sec !== 'number' || sec <= 0) {
+                    complete = false;
+                    return;
+                }
+                byDisc.set(track.discNumber, (byDisc.get(track.discNumber) ?? 0) + sec);
+            });
+            const totalSeconds = tracks.reduce((a, t) => a + (t.song?.lengthSeconds ?? 0), 0);
+            const discSeconds = complete
+                ? [...byDisc.entries()].sort((a, b) => a[0] - b[0]).map(([, s]) => s)
+                : [];
+            editor.setInfoBoxField("播放时长", buildDurationValue(discSeconds, totalSeconds));
         }
 
         if (opts.releaseDateEvent) {

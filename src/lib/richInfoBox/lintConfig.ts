@@ -1,3 +1,4 @@
+import { normalizeDuration } from '../importSource/common';
 
 export function lintActions(key: string) {
     return {
@@ -7,6 +8,7 @@ export function lintActions(key: string) {
 
 export const AUTOFIX_CONFIG = ([
     [autofixDate, ['发售日期', '发行日期', '连载开始', '放送开始', '开始', '播放结束', '结束']],
+    [autofixDuration, ['播放时长']],
 ] as [any, string[]][]).reduce((obj, [fn, keys]) => {
     keys.forEach((key) => obj[key] = fn);
     return obj;
@@ -43,4 +45,17 @@ function autofixDate(value: string): string | void {
         d = parseInt(enDate[2]);
         return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}${eventName}`;
     }
+}
+
+/**
+ * 播放时长：一律归一成 hh:mm:ss。
+ * 单级 `|播放时长= 3:45` 直接命中；
+ * 多级 `|播放时长={ [总时长] [一级注释|时长] [DISC 2|] }` 里 autofix 只挂在值单元格上
+ * （PlainArray 的 key 单元格不带 lint），所以只改各行时长、一级注释保持原样。
+ */
+function autofixDuration(value: string): string | void {
+    const fixed = normalizeDuration(value);
+    if (!fixed || fixed === value) return;
+
+    return fixed;
 }

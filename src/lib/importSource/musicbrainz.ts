@@ -1,5 +1,5 @@
 import type { ImportSource, AutoEditor, SearchResultEntry } from "./common";
-import { DefaultDict, warningTemplate3rdPartyWiki, formatDuration } from "./common";
+import { DefaultDict, warningTemplate3rdPartyWiki, buildDurationValue } from "./common";
 
 export class MusicBrainz implements ImportSource {
     name = "MusicBrainz";
@@ -98,8 +98,15 @@ export class MusicBrainz implements ImportSource {
 
         if (opts.length) {
             const { media } = await this.releaseInfo!;
-            const timeMs = media.flatMap(({ tracks }) => tracks.map(({ length }) => length)).reduce((a, b) => a + b, 0);
-            editor.setInfoBoxField("播放时长", formatDuration(Math.round(timeMs / 1000)));
+            // length 为毫秒；某碟有一轨时长缺失就认为该碟时长不可用
+            const discSeconds = media.map(({ tracks }) =>
+                tracks.length > 0 && tracks.every(({ length }) => typeof length === 'number' && length > 0)
+                    ? tracks.reduce((a, { length }) => a + length, 0) / 1000
+                    : null
+            );
+            const totalSeconds =
+                media.flatMap(({ tracks }) => tracks.map(({ length }) => length ?? 0)).reduce((a, b) => a + b, 0) / 1000;
+            editor.setInfoBoxField("播放时长", buildDurationValue(discSeconds, totalSeconds));
         }
 
         if (opts.releaseDate) {

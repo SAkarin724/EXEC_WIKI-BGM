@@ -1,5 +1,6 @@
 import type { ImportSource, AutoEditor, Disc, Credits } from "./common";
 import { CORS_ENDPOINT } from "../client";
+import { durationToSeconds, buildDurationValue } from "./common";
 
 const RE_DATE = /(\d{4})\D+(\d+)\D+(\d+)/u;
 const ROLE_WHITELIST = new Set(["歌", "作詞", "作曲", "編曲"]);
@@ -45,7 +46,17 @@ export class TowerJp implements ImportSource {
         }
 
         if (opts.length) {
-            editor.setInfoBoxField("播放时长", info.duration);
+            // 分碟齐备时总时长与各碟同源（逐曲累加）——页面的「合計収録時間」
+            // 与逐曲累加差 7:37（实测 2645996），且它自身来源不明；
+            // 累加值可复现，也与 MusicBrainz / VocaDB 的处理一致。
+            const derived = info.discSeconds.every((s): s is number => typeof s === 'number' && s > 0)
+                ? info.discSeconds.reduce((a, s) => a + s, 0)
+                : null;
+            const totalSeconds =
+                derived ??
+                durationToSeconds(info.duration) ??
+                info.discSeconds.reduce<number>((a, s) => a + (s ?? 0), 0);
+            editor.setInfoBoxField("播放时长", buildDurationValue(info.discSeconds, totalSeconds));
         }
 
         if (opts.trackListCredits) {
@@ -67,6 +78,8 @@ interface ItemInfo {
     label: string;
     description: string;
     duration: string;
+    /** 每碟总秒数；null = 该碟有曲目缺时长 */
+    discSeconds: (number | null)[];
     discs: Disc[];
 }
 
@@ -102,35 +115,52 @@ function parseItem(raw: string): ItemInfo {
     const contentInfo = content.querySelector("#RecordedContent");
     const contentIndices = contentInfo?.querySelectorAll(".TOL-item-info-PC-tab-recorded-contents-text > p")[0]?.textContent?.trim() ?? "";
     const duration = contentIndices.match(/合計収録時間 : (\d+:\d+:\d+)/)?.[1] ?? "";
-    const discs = contentInfo ? parseDiscInfo(contentInfo) : [];
+    const parsed = contentInfo ? parseDiscInfo(contentInfo) : { discs: [], discSeconds: [] };
 
     return {
         title,
         ...commodityInfoValues,
         description,
         duration,
-        discs,
+        ...parsed,
     };
 }
 
-function parseDiscInfo(contentInfo: Element): Disc[] {
+function parseDiscInfo(contentInfo: Element): { discs: Disc[]; discSeconds: (number | null)[] } {
     const discEls = Array.from(contentInfo.querySelectorAll("li.TOL-item-info-PC-tab-recorded-contents-list-item > ol"));
-    return discEls.map((disc) => {
+    const discSeconds: (number | null)[] = [];
+
+    const discs = discEls.map((disc) => {
         const trackEls = Array.from(disc.querySelectorAll("li"));
-        return {
-            tracks: trackEls.map((track) => {
-                const title = track.querySelector(".TOL-item-info-PC-tab-recorded-contents-list-track-title")?.textContent?.trim() ?? "";
-                const creditEls = Array.from(track.querySelectorAll("div.TOL-item-info-PC-tab-recorded-contents-list-track-hidden-contents-area > div"));
-                const credits = Object.fromEntries(creditEls.flatMap((credit) => {
-                    const spans = Array.from(credit.querySelectorAll("span"));
-                    const role = spans[0]?.textContent?.trim()?.replace("：", "");
-                    const names = spans.slice(1).map(span => span.textContent?.trim()).filter((n): n is string => !!n);
-                    return role && names.length > 0 && ROLE_WHITELIST.has(role) ? [[role, names]] : [];
-                }));
-                return { title, comment: "", credits };
-            }),
-        };
+        let sum = 0;
+        let missing = false;
+
+        const tracks = trackEls.map((track) => {
+            const title = track.querySelector(".TOL-item-info-PC-tab-recorded-contents-list-track-title")?.textContent?.trim() ?? "";
+
+            // 每曲时长：页面不印单碟总时长，按曲累加
+            const sec = durationToSeconds(
+                track.querySelector(".TOL-item-info-PC-tab-recorded-contents-list-track-length")?.textContent?.trim() ?? ""
+            );
+            if (sec === null) missing = true;
+            else sum += sec;
+
+            const creditEls = Array.from(track.querySelectorAll("div.TOL-item-info-PC-tab-recorded-contents-list-track-hidden-contents-area > div"));
+            const credits = Object.fromEntries(creditEls.flatMap((credit) => {
+                const spans = Array.from(credit.querySelectorAll("span"));
+                const role = spans[0]?.textContent?.trim()?.replace("：", "");
+                const names = spans.slice(1).map(span => span.textContent?.trim()).filter((n): n is string => !!n);
+                return role && names.length > 0 && ROLE_WHITELIST.has(role) ? [[role, names]] : [];
+            }));
+            return { title, comment: "", credits };
+        });
+
+        // 有一曲缺时长 -> 该碟不认（整体退回单级，不输出残值）
+        discSeconds.push(trackEls.length === 0 || missing ? null : sum);
+        return { tracks };
     });
+
+    return { discs, discSeconds };
 }
 
 function containsText(el: Element, query: string, text: string): boolean {

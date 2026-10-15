@@ -22,6 +22,8 @@ export const COMBO_CONFIG: {
             "Compilation",
             "DL Card",
             "Cassette",
+            "8cm CD",
+            "Vinyl",
             "Maxi",
         ],
         toRaw(value: string): [string, string][] {

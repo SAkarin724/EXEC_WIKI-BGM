@@ -423,6 +423,10 @@
             "named": false
           },
           {
+            "type": "Produce by",
+            "named": false
+          },
+          {
             "type": "Produced",
             "named": false
           },
@@ -863,6 +867,10 @@
             "named": false
           },
           {
+            "type": "produce by",
+            "named": false
+          },
+          {
             "type": "produced",
             "named": false
           },
@@ -1028,6 +1036,10 @@
           },
           {
             "type": "サウンドデレクション",
+            "named": false
+          },
+          {
+            "type": "ジャケットイラスト",
             "named": false
           },
           {
@@ -1658,6 +1670,10 @@
     "named": false
   },
   {
+    "type": "Produce by",
+    "named": false
+  },
+  {
     "type": "Produced",
     "named": false
   },
@@ -2114,6 +2130,10 @@
     "named": false
   },
   {
+    "type": "produce by",
+    "named": false
+  },
+  {
     "type": "produced",
     "named": false
   },
@@ -2287,6 +2307,10 @@
   },
   {
     "type": "サウンドデレクション",
+    "named": false
+  },
+  {
+    "type": "ジャケットイラスト",
     "named": false
   },
   {

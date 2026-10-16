@@ -1178,6 +1178,22 @@
           "name": "role",
           "content": {
             "type": "STRING",
+            "value": "Produce by"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "produce by"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
             "value": "produced by"
           }
         },
@@ -2507,6 +2523,14 @@
           "content": {
             "type": "STRING",
             "value": "イラスト"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "ジャケットイラスト"
           }
         },
         {

@@ -113,8 +113,9 @@ export class DiverseDirect implements ImportSource {
         }
 
         if (opts.links) {
-            const links: [string, string][] = [[this.name, page.url]];
+            const links: [string, string][] = [];
             if (page.youtube) links.push(["试听", page.youtube]);
+            links.push([this.name, page.url]);
             editor.setInfoBoxField("链接", links);
         }
 

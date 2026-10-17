@@ -290,6 +290,9 @@
 		setTrackInfo: (info: InfoRelease, style: 'parts' | 'tracks' | 'default' = 'default') => {
 			trackInfoState.val = writeTrackInfo(info, style);
 		},
+		setTrackInfoText: (text: string) => {
+			trackInfoState.val = text;
+		},
 		setInfoBox: (content: string, override: boolean) => {
 			if (override) {
 				infoBox.reset(content);

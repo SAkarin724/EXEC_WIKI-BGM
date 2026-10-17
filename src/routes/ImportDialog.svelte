@@ -3,6 +3,7 @@
 	import type { ImportSource, AutoEditor } from '$lib/importSource';
 	import { Bangumi } from '$lib/importSource/bangumi';
 	import { DiverseDirect } from '$lib/importSource/diversedirect';
+	import { Melonbooks } from '$lib/importSource/melonbooks';
 	import { MusicBrainz } from '$lib/importSource/musicbrainz';
 	import { TanocStore } from '$lib/importSource/tanocstore';
 	import { TowerJp } from '$lib/importSource/towerjp';
@@ -26,7 +27,8 @@
 		new TowerJp(),
 		new VocaDB(),
 		new DiverseDirect(),
-		new TanocStore()
+		new TanocStore(),
+		new Melonbooks()
 	];
 	let currentSource: ImportSource | null | undefined = $derived.by(() => {
 		if (!importURL) return null;

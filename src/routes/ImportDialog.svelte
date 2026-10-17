@@ -2,7 +2,9 @@
 	import Dialog from '$lib/Dialog.svelte';
 	import type { ImportSource, AutoEditor } from '$lib/importSource';
 	import { Bangumi } from '$lib/importSource/bangumi';
+	import { DiverseDirect } from '$lib/importSource/diversedirect';
 	import { MusicBrainz } from '$lib/importSource/musicbrainz';
+	import { TanocStore } from '$lib/importSource/tanocstore';
 	import { TowerJp } from '$lib/importSource/towerjp';
 	import { VocaDB } from '$lib/importSource/vocadb';
 	import Button from './Button.svelte';
@@ -22,7 +24,9 @@
 		new Bangumi(),
 		new MusicBrainz(),
 		new TowerJp(),
-		new VocaDB()
+		new VocaDB(),
+		new DiverseDirect(),
+		new TanocStore()
 	];
 	let currentSource: ImportSource | null | undefined = $derived.by(() => {
 		if (!importURL) return null;

@@ -23,7 +23,7 @@
 	import ConfirmationDialog from '$lib/ConfirmationDialog.svelte';
 	import Title from './Title.svelte';
 	import Cover from './Cover.svelte';
-	import { type ProcessedCover } from './coverImage.ts';
+	import { processCoverImage, type ProcessedCover } from './coverImage.ts';
 	import { pushState, type ContentState } from './History.svelte';
 	import { type BGMSession, refreshSession } from '$lib/bangumiSession';
 	import { importPersonCreated, importRelaHistory, importPersonBatch } from './relaDB.ts';
@@ -310,6 +310,14 @@
 		},
 		setMetaTags: (tags: string[]) => {
 			metaTagsState.val = tags.join(' ');
+		},
+		setCover: async (url: string) => {
+			const res = await fetch(url, { mode: 'cors' });
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const blob = await res.blob();
+			if (!blob.type.startsWith('image/')) throw new Error('下载到的不是图片');
+			const name = url.split('?')[0].split('/').pop() || 'cover';
+			coverState = await processCoverImage(new File([blob], name, { type: blob.type }));
 		},
 		importRela: (pids: number[]) => {
 			importPersonBatch(pids).then(() => {

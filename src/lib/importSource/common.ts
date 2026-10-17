@@ -23,6 +23,8 @@ export interface AutoEditor {
     setInfoBoxField: (field: string, value: string | [string, string][], options?: { editOnly?: boolean }) => boolean;
     unlinkInfoBoxField: (field: string) => void;
     setMetaTags: (tags: string[]) => void;
+    /** 从 URL 拉取封面图并设为当前条目的封面（失败时抛错） */
+    setCover: (url: string) => Promise<void>;
     importRela: (pids: number[]) => void;
     setSID: (sid: number) => void;
     pushWarning: (warning: string) => void;

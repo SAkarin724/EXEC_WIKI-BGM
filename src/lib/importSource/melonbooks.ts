@@ -10,6 +10,15 @@ import { CORS_ENDPOINT } from "../client";
  * 曲目表按需求原样塞进「曲目列表」输入框，不做曲目/艺术家解析；
  * 发售日期由 worker 拼好场贩后缀，例如 `2026-10-25 (M3-58)`。
  */
+// 厂牌名里带 `&`、`/`、`,` 这类分隔符时，必须用书名号括起来当一个整体，
+// 否则写进曲目列表后会被拆成多个制作人员（与 trackInfoWriter.nameEscape 的规则一致）。
+const RE_SEP = /[ 　\t&＆:：\/・、；,]/;
+const RE_LATIN_SPACE = /[A-Za-z] [A-Za-z]/;
+
+function quoteLabel(name: string): string {
+    return RE_SEP.test(name) && !RE_LATIN_SPACE.test(name) ? `《${name}》` : name;
+}
+
 interface PageInfo {
     /** 页面自身的链接，导入时写进「链接」字段 */
     url: string;
@@ -62,23 +71,22 @@ export class Melonbooks implements ImportSource {
         }
 
         if (opts.trackListText) {
-            if (page.tracklistText) {
-                editor.setTrackInfoText(page.tracklistText);
-            } else {
+            // 和其它网店源一致：厂牌写成「厂牌：…」的职员行放在曲目列表最前面，
+            // infobox 的 厂牌 由曲目列表联动填，不单独去写（会被联动覆盖）。
+            const parts: string[] = [];
+            if (opts.label && page.label) parts.push(`厂牌：${quoteLabel(page.label)}`);
+            if (page.tracklistText) parts.push(page.tracklistText);
+
+            if (parts.length > 0) {
+                editor.setTrackInfoText(parts.join("\n\n"));
+            }
+            if (!page.tracklistText) {
                 editor.pushWarning("这个页面里没有找到曲目表");
             }
         }
 
         if (opts.titleIntro) {
             editor.editTitleIntro(page.title, page.summary);
-        }
-
-        if (opts.label && page.label) {
-            // 厂牌 是跟着曲目列表联动的字段，而曲目表是原样塞进去的、不含职员行。
-            // 先写值、再断开联动：unlink 之后 edit() 会跳过该字段，
-            // 这样后面曲目列表推上来的空摘要就盖不掉它了。
-            editor.setInfoBoxField("厂牌", page.label);
-            editor.unlinkInfoBoxField("厂牌");
         }
 
         if (opts.price && page.price) {

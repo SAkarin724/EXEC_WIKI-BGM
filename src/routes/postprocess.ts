@@ -725,6 +725,35 @@ function parseSongCredit(
 	}
 	let cfs_ = [...cfs];
 	/**
+	 * 先把 `《 … 》` 收成一个 creator。
+	 * 书名号里整段就是一个名字（不管里面是 `MoAE:.` 还是 `A & B`），
+	 * 而语法层把 `《` / `》` 单独出 token，会导致它两侧的连接词碎片接不上：
+	 * `A × 《B:C》 feat.D` 会被切成 `A ×` / `B:C` / `feat.D` 三段。
+	 */
+	{
+		const collapsed: CreditField[] = [];
+		for (let i = 0; i < cfs_.length; i++) {
+			if (cfs_[i].type === '《') {
+				const close = cfs_.findIndex((f, j) => j > i && f.type === '》');
+				if (close > i) {
+					const inner = cfs_
+						.slice(i + 1, close)
+						.map((f) => f.value)
+						.join('')
+						.trim();
+					if (inner) {
+						markQuotedCreatorName(inner);
+						collapsed.push({ type: 'creator', value: inner });
+					}
+					i = close;
+					continue;
+				}
+			}
+			collapsed.push(cfs_[i]);
+		}
+		cfs_ = collapsed;
+	}
+	/**
 	 * 分隔符两侧是否属于同一个名字（是则返回合并后的名字文本）：
 	 * 1. 拉丁字母相邻：原有规则，`Masahiro "Godspeed" Aoki`；
 	 * 2. 连接词碎片：语法层按分隔符切字符，`A feat. B` / `A starring B` / `A × B`

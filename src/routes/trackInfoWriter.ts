@@ -1,6 +1,6 @@
 import { type Release, type Credits } from "$lib/importSource";
 import { RE_ROLE_KEYWORD, pagenoJoin, multiDiscPageNoJoin, Role, stripRedundantAlias, Release as FormalRelease } from "./postprocess";
-import { hasArtistJoinerSyntax, isComposedName, matchCreatorUnits, resolvePlainStarring, shouldJoinStarring } from "./artistJoiner";
+import { hasArtistJoinerSyntax, isComposedName, matchCreatorUnits, resolvePlainStarring, shouldJoinStarring, splitArtistUnits } from "./artistJoiner";
 import { isQuotedCreatorName } from "./nameQuoting";
 import { splitStarringCredit } from "./starringCredit";
 import type { ResolvedRelaMap } from "./disambiguation";
@@ -186,11 +186,26 @@ export function nameEscape(n: string): string {
     }
 
     // 工具自己支持的连接词写法（`藤本記子 & 福富雅之` / `A feat. B` / `角色 starring 声优`）
-    // 不进书名号：它们能被正确拆成单元，不属于「无法判断是否被错误分割」的情形。
-    // 但名字里同时有关键字（`作編曲` 之类）时仍然要括——那种才是真的会被当成制作人员行。
-    if (isComposedName(n) && !RE_ROLE_KEYWORD.test(n)) return n;
+    // 整体不进书名号：它们能被正确拆成单元，不属于「无法判断是否被错误分割」的情形。
+    // 但每个单元自己可能要转义 —— `しゅーりん×MoAE:. feat.Risa Yuzuki` 里的 `MoAE:.`
+    // 带 `:`，整体不括的话语法会把这个名字切烂（`×、MoAE:.、feat.Risa Yuzuki`）。
+    // 名字里同时有关键字（`作編曲` 之类）时仍然整体括——那种才是真的会被当成制作人员行。
+    if (isComposedName(n) && !RE_ROLE_KEYWORD.test(n)) {
+        const units = splitArtistUnits(n, shouldJoinStarring(n));
+        if (units && units.length > 1) {
+            return units
+                .map((unit, i) => `${i === 0 ? '' : unit.joiner}${escapePlainName(unit.text)}`)
+                .join('');
+        }
+        return n;
+    }
 
-    return ((RE_SEP.test(n) && !RE_LATIN_SPACE.test(n)) || RE_ROLE_KEYWORD.test(n)) ? `《${n}》` : n;
+    return escapePlainName(n);
+}
+
+/** 不含连接词的名字：命中分隔符 / 职位关键字时整体套书名号 */
+function escapePlainName(n: string): string {
+    return (RE_SEP.test(n) && !RE_LATIN_SPACE.test(n)) || RE_ROLE_KEYWORD.test(n) ? `《${n}》` : n;
 }
 
 function formatCredits(rmap: Record<string, string[]>): string {

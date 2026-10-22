@@ -10,6 +10,10 @@
  *      are always exported.
  *   4. Everything else (matched to a single, unambiguous display name) is skipped.
  *
+ * 名字在 Gallery 里被「去除关联」时，调用方传入的 name2staff 里就没有它了：
+ * 这条制作信息依旧会写出（不写等于丢信息），只是拿不到人物 ref / 别名标注，
+ * 即 patch 里保持纯文本、relaData 里不出现。
+ *
  * Output:
  *   - relaData:   filtered SubjectRelaPerson[] (usable as submit data).
  *   - patchText:  copyable patch text in the `角色：名字(1,3-5)、...` style.
@@ -120,8 +124,7 @@ function shouldExport(
 export function buildSelectivePatch(
 	release: Readonly<Release>,
 	name2staff: ResolvedRelaMap,
-	full = false,
-	removedRela?: ReadonlySet<string>
+	full = false
 ): { relaData: SubjectRelaPerson[]; patchText: string; patchContent: StaffPatchContent } {
 	const aliasIndex = buildAliasIndex(name2staff);
 	const isMultiDisc = release.tracks.length > 1;
@@ -130,7 +133,6 @@ export function buildSelectivePatch(
 	const kept: [string, { name: string; parts: number[][] }][] = [];
 	Object.entries(release.credits).forEach(([roleID, creators]) => {
 		Object.entries(creators).forEach(([name, pd]: [string, NameData]) => {
-			if (removedRela?.has(name)) return;
 			if (!full && !shouldExport(roleID, name, name2staff, aliasIndex, release.useArtistJoiner)) return;
 			kept.push([roleID, { name, parts: pd.parts }]);
 		});

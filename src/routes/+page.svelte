@@ -45,7 +45,8 @@
 	let dupResolutionEntries = $derived(Array.from(dupResolution.entries()));
 	// Creators whose bgm relation was manually removed (clicked away in the Gallery).
 	// They are excluded from the resolved name2staff, so they no longer produce
-	// submit data / patch entries, while their names stay in the infobox text.
+	// submit data / relation entries; their names are still written to the patch
+	// (and the infobox) as plain text, just without a person ref / alias hint.
 	let removedRela = $state(new SvelteSet<string>());
 	let filteredRelaMap = $derived(
 		new Map(Array.from(currentRelease.relaMap.entries()).filter(([name]) => !removedRela.has(name)))
@@ -131,8 +132,7 @@
 			const { patchText, patchContent } = buildSelectivePatch(
 				currentRelease,
 				name2staff,
-				useFullPatch,
-				removedRela
+				useFullPatch
 			);
 			if (patchText) {
 				data.patch = patchText;
@@ -159,7 +159,7 @@
 	// Copy a selective (or full, with Shift) patch generated from the current
 	// Release, ported from the "Staff Tag Fix" userscript.
 	async function copyPatch() {
-		const { patchText } = buildSelectivePatch(currentRelease, name2staff, useShiftOnCopy, removedRela);
+		const { patchText } = buildSelectivePatch(currentRelease, name2staff, useShiftOnCopy);
 		if (!patchText) {
 			toast('当前没有符合条件的 Patch', { alert: true });
 			return;

@@ -3,6 +3,7 @@ import { RE_ROLE_KEYWORD, pagenoJoin, multiDiscPageNoJoin, Role, stripRedundantA
 import { hasArtistJoinerSyntax, isComposedName, matchCreatorUnits, resolvePlainStarring, shouldJoinStarring, splitArtistUnits } from "./artistJoiner";
 import { isQuotedCreatorName } from "./nameQuoting";
 import { splitStarringCredit } from "./starringCredit";
+import { splitCircleCredit } from "./circleCredit";
 import type { ResolvedRelaMap } from "./disambiguation";
 import { orderedEntries } from "$lib/bangumiUtils";
 
@@ -128,6 +129,14 @@ export function fromFormalRelease(rf: Readonly<FormalRelease>, name2staff?: Reso
             const starring = resolvePlainStarring(name);
             if (starring && name2staff.get(starring.cv)?.[0]) {
                 credit[role].push(stripRedundantAlias(name));
+                return;
+            }
+
+            // 团体标注（`早餐 @A8RECORDS`）：只有 `@` 左边的人名参与关联，
+            // 命中时保留整条写法（团体名照常显示、不带 ref）。
+            const atCircle = splitCircleCredit(name);
+            if (atCircle && name2staff.get(atCircle.name)?.[0]) {
+                credit[role].push(stripRedundantAlias(name));
             }
         }
     } else {
@@ -159,6 +168,15 @@ export function fromFormalRelease(rf: Readonly<FormalRelease>, name2staff?: Reso
 export { splitStarringCredit, starringCvNames, STARRING_WORD } from './starringCredit';
 
 export function nameEscape(n: string): string {
+    // 团体标注（`早餐 @A8RECORDS`）：`@` 左边单独转义，`@团体` 原样留在外面。
+    // 左边需要加书名号时补一个空格，避免 `》@` 粘在一起导致再次解析失败。
+    const atCircle = splitCircleCredit(n);
+    if (atCircle) {
+        const head = nameEscape(atCircle.name);
+        const suffix = atCircle.suffix;
+        return `${head}${head.endsWith('》') && !/^\s/.test(suffix) ? ' ' : ''}${suffix}`;
+    }
+
     // `角色 starring 声优`：只转义角色名，` starring 声优` 留在外面，
     // 保持这种老写法可读、也能被继续识别
     const starring = splitStarringCredit(n);

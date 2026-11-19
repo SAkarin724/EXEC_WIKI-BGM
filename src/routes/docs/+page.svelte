@@ -249,6 +249,22 @@ Compose／Jeet Singh<span class="text-bgm-pink">(Tr.1-4,8)</span>, Salita<span c
 					class="text-bgm-pink">｜</span
 				>五十嵐裕美</pre>
 		</section>
+		<section>
+			<h3 id="grammar-at-circle">团体标注（@）</h3>
+			<p>
+				<code>@</code> 前写人名、后面写所属的团体 / 公司 / 社团。只关联 <code>@</code>
+				前的人，<code>@</code> 和团体名不参与关联，显示时原样保留。团体名里可以包含
+				<code>:</code>、<code>/</code> 和空格（如 <code>@8:48</code>、<code>@A8 RECORDS</code>），
+				遇到 <code>、</code> 或换行时结束：
+			</p>
+			<pre>编曲：早餐<span class="text-bgm-pink"> @</span>A8RECORDS
+编曲：早餐<span class="text-bgm-pink">@</span>A8RECORDS</pre>
+			<p>
+				与 <code>早餐(A8RECORDS)</code> 含义相同，但 <code>@</code>
+				写法始终保留团体名。括号写法受「去除人名后括号内的社团名」设置影响：开着时不显示括号里的社团名，关着时保留显示；两种情况下关联都只取前面的人名。
+				名字本身就含 <code>@</code> 或括号时，用书名号括起来当整体：<code>《foo@bar》</code>。
+			</p>
+		</section>
 	</section>
 
 	<section>

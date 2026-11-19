@@ -2,6 +2,7 @@
 	import { Release, Role, containsNormalizedName, stripRedundantAlias } from './postprocess';
 	import { Match, type ResolvedRelaMap } from './disambiguation';
 	import { resolveArtistUnits, resolvePlainStarring, shouldJoinStarring } from './artistJoiner';
+	import { splitCircleCredit } from './circleCredit';
 	import { orderedEntries } from '$lib/bangumiUtils';
 
 	interface PreviewProps {
@@ -85,6 +86,14 @@
 	 * 返回 null 表示不是这类写法，按整条名字渲染。
 	 */
 	function representParts(name: string, allowComposed = true): (NameInfo | string)[] | null {
+		// 团体标注（`早餐 @A8RECORDS`）：`@` 左边按普通名字渲染（可带链接），
+		// `@团体` 原样显示；和 starring 一样不受艺术家开关影响
+		const atCircle = splitCircleCredit(name);
+		if (atCircle) {
+			const head = representParts(atCircle.name, allowComposed) ?? [representName(atCircle.name)];
+			return [...head, atCircle.suffix];
+		}
+
 		// 艺术家开关关掉时：回退成普通多名并列（`MK、Kanae Asaba (浅場佳苗)`），
 		// 即不再用连接词写法，但名字照样按单元拆开渲染
 		if (!allowComposed) {

@@ -32,6 +32,7 @@ import { type Staff } from '$lib/db';
 import { orderedEntries } from '$lib/bangumiUtils';
 import { type SubjectRelaPerson } from '$lib/client';
 import { nameEscape } from './trackInfoWriter';
+import { splitCircleCredit } from './circleCredit';
 import {
 	type StaffPatchContent,
 	type StaffPatchItem,
@@ -82,20 +83,23 @@ function shouldExport(
 	// 1. Split roles are always exported.
 	if (isSplitRole(roleID)) return true;
 
-	const match = name2staff.get(name);
+	// 团体标注（`早餐 @A8RECORDS`）：选择性规则照常套在 `@` 左边的人名上，
+	// 团体名不参与判定（它本来就不该有 ref）。
+	const target = splitCircleCredit(name)?.name ?? name;
+	const match = name2staff.get(target);
 	// 2. Not in the relation DB (no person href) -> export.
 	// 连接词 / 角色写法（`A feat. B` / `A & B` / `角色 starring 声优`）整体查不到，
 	// 但它们本来就是一个名字下的多个单元，按单元判断：全都已明确匹配就与
 	// 单个名字同一口径地跳过，否则照旧导出。
 	if (!match) {
-		const starring = resolvePlainStarring(name);
+		const starring = resolvePlainStarring(target);
 		// 艺术家职位才认艺术家专用连接词（受开关控制）
 		const units = starring
 			? [{ text: starring.cv }]
 			: resolveArtistUnits(
-					name,
+					target,
 					name2staff,
-					shouldJoinStarring(name),
+					shouldJoinStarring(target),
 					roleID === Role.V && useArtistJoiner
 				);
 		if (!units) return true;
@@ -243,6 +247,25 @@ function buildCreditItem(
 	release: Readonly<Release>,
 	allowComposed = true
 ): StaffPatchItem {
+	// 团体标注（`早餐 @A8RECORDS`）：`@` 左边照常构造成 item，
+	// `@团体` 单独作为一个纯文本 part —— 显示端可以按需隐藏 / 展示团体。
+	const atCircle = splitCircleCredit(name);
+	if (atCircle) {
+		const inner = buildCreditItem(atCircle.name, name2staff, release, allowComposed);
+		const suffix = atCircle.suffix;
+
+		if (Array.isArray(inner.parts)) return { parts: [...inner.parts, suffix] };
+
+		if (inner.type === 'person' && inner.person) {
+			return {
+				parts: [{ ref: inner.person.ref ?? null, text: inner.person.text ?? '' }, suffix]
+			};
+		}
+
+		// `cv_credit` 等其他形态没法安全追加，退化成纯文本
+		return { parts: [{ ref: null, text: name }] };
+	}
+
 	// 角色曲老写法（`角色 starring 声优`）：显示形式原样保留，
 	// 声优带 ref、角色不带（角色不是人物，不该被关联）
 	const starring = resolvePlainStarring(name);
@@ -389,18 +412,20 @@ function buildRelaData(
 		if (relation.startsWith("custom-")) continue; // custom roles are not in BGM rela
 		const eps = parts.length === 0 ? "" : isMultiDisc ? multiDiscPageNoJoin(parts) : pagenoJoin(parts[0]);
 
+		// 团体标注（`早餐 @A8RECORDS`）：只有 `@` 左边的人名参与关联
+		const target = splitCircleCredit(name)?.name ?? name;
 		// 角色曲老写法（`角色 starring 声优`）：只有声优参与关联
-		const starring = resolvePlainStarring(name);
+		const starring = resolvePlainStarring(target);
 		// 连接词写法（`A feat. B`）：艺术家职位才认艺术家专用连接词（受开关控制）；
 		// 关掉时回退成通用分隔（`& / × / +`），其他职位同样只认通用分隔
 		const targets: [string, Staff | undefined][] = starring
 			? [[starring.cv, name2staff.get(starring.cv)?.[0]]]
 			: (matchCreatorUnits(
-					name,
+					target,
 					name2staff,
-					shouldJoinStarring(name),
+					shouldJoinStarring(target),
 					relation === Role.V && useArtistJoiner
-				) ?? [[name, name2staff.get(name)?.[0]]]);
+				) ?? [[target, name2staff.get(target)?.[0]]]);
 
 		targets.forEach(([, staff]) => {
 			if (!staff) return; // skip unmatched for submit data

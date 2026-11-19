@@ -14,6 +14,7 @@ import { type Staff } from '$lib/db';
 import { type ResolvedRelaMap } from './disambiguation';
 import { isQuotedCreatorName } from './nameQuoting';
 import { RE_STARRING, STARRING_WORD, splitStarringCredit } from './starringCredit';
+import { hasCircleSyntax, splitCircleCredit } from './circleCredit';
 
 export const ARTIST_JOINERS = ['feat.', 'ft', 'fw', 'vs', '+', 'with', '&', '×'];
 
@@ -226,25 +227,33 @@ export function shouldJoinStarring(name: string): boolean {
 }
 
 /**
- * 这个名字是「由多个名字拼成的写法」吗（连接词写法 / 角色曲写法）。
+ * 这个名字是「由多个名字拼成的写法」吗（连接词写法 / 角色曲写法 / 团体标注）。
  * 这种整体名字不可能对应到某个人物，界面上不应作为单个可搜索条目出现
- * ——它的各个单元会各自成为条目。
+ * ——它的各个单元会各自成为条目（团体标注则是 `@` 左边的人名成为条目）。
  */
 export function isComposedName(name: string): boolean {
-	return Boolean(resolvePlainStarring(name) || splitArtistUnits(name, shouldJoinStarring(name)));
+	return Boolean(
+		resolvePlainStarring(name) ||
+			splitArtistUnits(name, shouldJoinStarring(name)) ||
+			splitCircleCredit(name)
+	);
 }
 
 /**
- * 名字里带连接词 / 角色曲写法吗（`A & B` / `A feat. B` / `角色 starring 声优`）。
+ * 名字里带连接词 / 角色曲 / 团体标注写法吗
+ * （`A & B` / `A feat. B` / `角色 starring 声优` / `早餐 @A8RECORDS`）。
  *
  * 不看《》登记：用来判断一个书名号引用的名字**写出去时要不要重新加书名号**。
- * 书名号是给下游（维基端 / 再次导入工具）看的语法转义，内容本来不会被拆开时就不必加。
+ * 书名号是给下游（维基端 / 再次导入工具）看的语法转义，内容本来不会被拆开时就不必加；
+ * 含 `@` / 括号团体标注的单独名字必须括回去，否则再次导入会被当成「人物 + 团体」。
  */
 export function hasArtistJoinerSyntax(name: string): boolean {
 	const text = String(name || '');
 	if (!text.trim()) return false;
 
-	return Boolean(RE_STARRING.test(text) || splitArtistUnitsRaw(text, false, true));
+	return Boolean(
+		RE_STARRING.test(text) || hasCircleSyntax(text) || splitArtistUnitsRaw(text, false, true)
+	);
 }
 
 /* ------------------------------------------------------------------
@@ -257,8 +266,10 @@ export function hasArtistJoinerSyntax(name: string): boolean {
  * 还原出完整写法后再交给 splitArtistUnits / splitStarringCredit 处理。
  *
  * `starring` 也要参与粘连（它同样会被切开），虽然它不是关联意义上的连接词。
+ * `@` 只用于 `早餐 @ A8RECORDS` 这种符号被单独切开的写法（`@A8RECORDS`
+ * 以 `@` 开头的碎片由 `isAtCircleFragment` 判断）。
  * ------------------------------------------------------------------ */
-const GLUE_JOINERS = [...ARTIST_JOINERS, STARRING_WORD];
+const GLUE_JOINERS = [...ARTIST_JOINERS, STARRING_WORD, '@'];
 const GLUE_BODY = GLUE_JOINERS.map(escapeRe).join('|');
 
 const RE_GLUE_EXACT = new RegExp(`^(?:${GLUE_BODY})\\.?$`, 'i');

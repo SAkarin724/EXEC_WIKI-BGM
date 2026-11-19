@@ -18,6 +18,7 @@ import {
 	startsWithJoinerFragment
 } from './artistJoiner';
 import { STARRING_WORD, starringCvNames } from './starringCredit';
+import { circleHeadNames, isAtCircleFragment, splitCircleCredit } from './circleCredit';
 
 export enum Role {
     undef = "",
@@ -397,6 +398,9 @@ export class Release {
             // 角色曲老写法（`角色 starring 声优`）：声优要像 `(CV.声优)` 那样
             // 建立关联就得进池子；角色名不进（它是角色，不是人物）。
             ...starringCvNames(this.credits),
+            // 团体标注（`早餐 @A8RECORDS`）：只把 `@` 左边的人名放进池子，
+            // 团体名既不关联、也不作为条目出现在关联概览里。
+            ...circleHeadNames(this.credits),
         ]));
 		const qr = await queryNameOrAliasBulk(allCreators);
 		this.relaMap = new Map(allCreators.map((creator, i) => [creator, qr[i]]));
@@ -476,6 +480,14 @@ export class Release {
 		name2staff?: ResolvedRelaMap,
 		allowComposed = true
 	): string | null {
+		// 团体标注（`早餐 @A8RECORDS`）：`@` 左边是人名，右边只是团体文本。
+		// 与角色曲写法一样，这不是艺术家连接词，不受 `allowComposed` 开关影响。
+		const atCircle = splitCircleCredit(name);
+		if (atCircle) {
+			const staffName = name2staff?.get(atCircle.name)?.[0]?.name;
+			return `${formatUnit(atCircle.name, staffName)}${atCircle.suffix}`;
+		}
+
 		// 艺术家开关关掉时：连接词写法整条保留，不做逐单元处理
 		if (!allowComposed) return null;
 
@@ -648,18 +660,20 @@ export class Release {
 			const pbase = PREFIXABLE_ROLES.find((base) => roleID.startsWith(base + '-'));
 			if (pbase) roleID = pbase;
 			Object.entries(creators).forEach(([creator, pd]) => {
+				// 团体标注（`早餐 @A8RECORDS`）：只关联 `@` 左边的人名
+				const target = splitCircleCredit(creator)?.name ?? creator;
 				// 角色曲老写法（`角色 starring 声优`）
-				const starring = resolvePlainStarring(creator);
+				const starring = resolvePlainStarring(target);
 				// 连接词写法（`A feat. B`）：艺术家职位才认艺术家专用连接词（受开关控制）；
 				// 关掉时回退成通用分隔（`& / × / +`），其他职位同样只认通用分隔
 				const targets: [string, Staff | undefined][] = starring
 					? [[starring.cv, name2staff.get(starring.cv)?.[0]]]
 					: (matchCreatorUnits(
-							creator,
+							target,
 							name2staff,
-							shouldJoinStarring(creator),
+							shouldJoinStarring(target),
 							roleID === Role.V && this.useArtistJoiner
-						) ?? [[creator, name2staff.get(creator)?.[0]]]);
+						) ?? [[target, name2staff.get(target)?.[0]]]);
 
 				targets.forEach(([, staff]) => {
 					if (!staff) return;
@@ -712,6 +726,18 @@ export class Release {
 	}
 }
 
+/** 括号还没闭合（`kaztora (森羅`）：说明括号里的名字被分隔符切开了 */
+function hasUnclosedParen(text: string): boolean {
+	let depth = 0;
+
+	for (const ch of text) {
+		if (ch === '(' || ch === '（') depth++;
+		else if (ch === ')' || ch === '）') depth = Math.max(0, depth - 1);
+	}
+
+	return depth > 0;
+}
+
 function parseSongCredit(
 	cfs: CreditField[],
 	name2character: Map<string, [string, string]>,
@@ -758,7 +784,9 @@ function parseSongCredit(
 	 * 1. 拉丁字母相邻：原有规则，`Masahiro "Godspeed" Aoki`；
 	 * 2. 连接词碎片：语法层按分隔符切字符，`A feat. B` / `A starring B` / `A × B`
 	 *    会被切成碎片，这里粘回完整写法，供 splitArtistUnits / splitStarringCredit 识别；
-	 * 3. `&` 本身是分隔符（`A & B`），连着符号一起粘回来。
+	 * 3. `&` 本身是分隔符（`A & B`），连着符号一起粘回来；
+	 * 4. `@` 团体标注（`早餐 @A8RECORDS`）：`@` 前的空格不是分隔符，
+	 *    `@A8RECORDS` 与左边的人名粘回一条（团体名不参与关联）。
 	 */
 	const glueName = (sep: CreditField, prev: CreditField, next: CreditField): string | null => {
 		if (prev?.type !== "creator" || next?.type !== "creator") return null;
@@ -769,6 +797,9 @@ function parseSongCredit(
 			return `${prev.value} ${sep.value.trim().replace(/＆/g, '&')} ${next.value}`;
 		}
 		if (!/^\s+$/.test(sep.value)) return null;
+
+		// 团体标注（`早餐 @A8RECORDS`）：`@` 前的空格不是分隔符，两段属于同一条 credit
+		if (isAtCircleFragment(next.value)) return `${prev.value} ${next.value}`;
 
 		const glue =
 			testEdge(prev, next) ||
@@ -781,6 +812,70 @@ function parseSongCredit(
 		return `${prev.value} ${next.value}`;
 	};
 
+	// 团体标注：`@` 后面的团体名可能含 `:` `/` 或空格（`@8:48` / `@A8 RECORDS`），
+	// 括号团体名也可能含空格（`(森羅 万象)`）。语法层会把这些分隔符切开，
+	// 必须在下面的粘连循环（它会删掉未参与粘连的分隔符）之前先吞成一条 credit。
+	{
+		let mode: 'at' | 'paren' | null = null;
+
+		for (let i = 0; i < cfs_.length; i++) {
+			const cf = cfs_[i];
+
+			if (cf.type === "role") {
+				mode = null;
+				continue;
+			}
+
+			if (cf.type === "creator") {
+				// `阿澜` + ` ` + `@8`：`@` 碎片与左边的人名合并
+				if (
+					isAtCircleFragment(cf.value) &&
+					i >= 2 &&
+					cfs_[i - 2].type === "creator" &&
+					cfs_[i - 1].type === "creatorSeparator" &&
+					!/^[、,，；;]+$/.test(cfs_[i - 1].value.trim())
+				) {
+					cfs_[i - 2].value += cfs_[i - 1].value + cf.value;
+					cfs_.splice(i - 1, 2);
+					i -= 3;
+					continue;
+				}
+
+				// 括号还没闭合：说明括号里的名字被分隔符切开了，继续粘
+				if (mode === 'paren' && hasUnclosedParen(cf.value)) continue;
+				const split = splitCircleCredit(cf.value);
+				// `早餐 @ A8:48`：单独的 `@` 还没接上团体名，继续吞后面的碎片
+				const pendingAt = /(?:^|\s)@$/.test(cf.value);
+				mode =
+					split?.kind === 'at' || pendingAt
+						? 'at'
+						: hasUnclosedParen(cf.value)
+							? 'paren'
+							: null;
+				continue;
+			}
+
+			if (cf.type !== "creatorSeparator" || !mode) continue;
+
+			// `@` 团体名遇到列表分隔符就结束（后面是另一个人）；括号里则继续吞到右括号
+			if (mode === 'at' && /^[、,，；;]+$/.test(cf.value.trim())) {
+				mode = null;
+				continue;
+			}
+
+			const prev = cfs_[i - 1];
+			const next = cfs_[i + 1];
+			if (!prev || prev.type !== "creator" || !next || next.type !== "creator") {
+				mode = null;
+				continue;
+			}
+
+			prev.value += cf.value + next.value;
+			cfs_.splice(i, 2);
+			i--;
+			if (mode === 'paren' && !hasUnclosedParen(prev.value)) mode = null;
+		}
+	}
 	// merge creator fragments; remove creatorSeperator
 	for (let i = 0; i < cfs_.length; i++) {
         if (cfs_[i].type !== "creatorSeparator") { continue; }

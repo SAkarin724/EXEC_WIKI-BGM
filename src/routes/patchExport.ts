@@ -33,6 +33,7 @@ import { orderedEntries } from '$lib/bangumiUtils';
 import { type SubjectRelaPerson } from '$lib/client';
 import { nameEscape } from './trackInfoWriter';
 import { splitCircleCredit } from './circleCredit';
+import { sortByCreditOrder } from './creditOrder';
 import {
 	type StaffPatchContent,
 	type StaffPatchItem,
@@ -370,26 +371,66 @@ export function buildPatchContent(
 	release: Readonly<Release>,
 	editor: string
 ): StaffPatchContent {
-	const trackCredits: Record<string, Record<string, StaffPatchItem[]>> = {};
-	const epinfo: Record<string, StaffPatchItem[]> = {};
+	// 先保留 name，排序后再映射为 item：
+	// trackCredits / epinfo 需要不同的顺序来源（每首本地 vs 全专辑首次出现）。
+	type NamedItem = { name: string; item: StaffPatchItem };
+
+	const trackBuckets: Record<string, Record<string, NamedItem[]>> = {};
+	const epinfoBuckets: Record<string, NamedItem[]> = {};
+
+	const pushItem = (bucket: NamedItem[], name: string, item: StaffPatchItem) => {
+		if (!bucket.some((entry) => JSON.stringify(entry.item) === JSON.stringify(item))) {
+			bucket.push({ name, item });
+		}
+	};
 
 	for (const [roleID, { name, parts }] of kept) {
 		const { roleKey, item } = buildContentItem(roleID, name, name2staff, release);
 
 		// parts 为空 = 参与全部曲目 -> 条目级 epinfo
 		if (parts.length === 0 || parts.every((discParts) => discParts.length === 0)) {
-			const bucket = (epinfo[roleKey] ??= []);
-			if (!bucket.some((it) => JSON.stringify(it) === JSON.stringify(item))) bucket.push(item);
+			pushItem((epinfoBuckets[roleKey] ??= []), name, item);
 			continue;
 		}
 
 		parts.forEach((discParts, discIndex) => {
 			discParts.forEach((trackNo) => {
-				const roleMap = (trackCredits[`${discIndex + 1}.${trackNo}`] ??= {});
-				const bucket = (roleMap[roleKey] ??= []);
-				if (!bucket.some((it) => JSON.stringify(it) === JSON.stringify(item))) bucket.push(item);
+				const trackKey = `${discIndex + 1}.${trackNo}`;
+				const roleMap = (trackBuckets[trackKey] ??= {});
+				pushItem((roleMap[roleKey] ??= []), name, item);
 			});
 		});
+	}
+
+	const roleKeyOf = (roleID: string) => splitRoleLabel(roleID).key;
+
+	// 每首曲目：按该曲目 credit 行的本地顺序
+	const trackCredits: Record<string, Record<string, StaffPatchItem[]>> = {};
+	for (const [trackKey, roleMap] of Object.entries(trackBuckets)) {
+		const refs = release.trackCreatorOrder.get(trackKey) ?? [];
+		const outRoleMap: Record<string, StaffPatchItem[]> = {};
+
+		for (const [roleKey, bucket] of Object.entries(roleMap)) {
+			const roleRefs = refs.filter((ref) => roleKeyOf(ref.roleID) === roleKey);
+			outRoleMap[roleKey] = sortByCreditOrder(
+				bucket,
+				(entry) => entry.name,
+				roleRefs
+			).map((entry) => entry.item);
+		}
+
+		trackCredits[trackKey] = outRoleMap;
+	}
+
+	// 条目级（parts 为空）：按全专辑首次出现顺序，与 patchText 一致
+	const epinfo: Record<string, StaffPatchItem[]> = {};
+	for (const [roleKey, bucket] of Object.entries(epinfoBuckets)) {
+		const roleRefs = release.firstAppearanceOrder.filter((ref) => roleKeyOf(ref.roleID) === roleKey);
+		epinfo[roleKey] = sortByCreditOrder(
+			bucket,
+			(entry) => entry.name,
+			roleRefs
+		).map((entry) => entry.item);
 	}
 
 	return {
@@ -468,7 +509,16 @@ function buildPatchText(
 	const lines: string[] = [];
 	const pushRole = (roleID: string, nameMap: Map<string, number[][]>) => {
 		if (!nameMap.size) return;
-		const chunks = Array.from(nameMap.entries()).map(([name, parts]) => {
+
+		// 全局 patchText：按该职位名字在输入里首次出现的顺序排列
+		const roleRefs = release.firstAppearanceOrder.filter((ref) => ref.roleID === roleID);
+		const ordered = sortByCreditOrder(
+			Array.from(nameMap.entries()),
+			([name]) => name,
+			roleRefs
+		);
+
+		const chunks = ordered.map(([name, parts]) => {
 			const hasAnyTrack = parts.some((p) => p.length > 0);
 			const pn = isMultiDisc ? multiDiscPageNoJoin(parts) : pagenoJoin(parts[0] ?? []);
 			const withPageNo = (display: string) => (hasAnyTrack ? `${display}(${pn})` : display);

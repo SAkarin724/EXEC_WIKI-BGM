@@ -19,6 +19,7 @@ import {
 } from './artistJoiner';
 import { STARRING_WORD, starringCvNames } from './starringCredit';
 import { circleHeadNames, isAtCircleFragment, splitCircleCredit } from './circleCredit';
+import { type CreditRef, type TrackCreatorOrder, sortByCreditOrder } from './creditOrder';
 
 export enum Role {
     undef = "",
@@ -280,6 +281,10 @@ export class Release {
 	relaMap: Map<string, Staff[]> = new Map();
 	useOriginalSplitRolesFormat: boolean = false;
 	useArtistJoiner: boolean = true;
+	/** 每首曲目 credit 行里的 (role, name) 顺序（Preview / trackCredits 用） */
+	trackCreatorOrder: TrackCreatorOrder = new Map();
+	/** 全专辑首次出现的 (role, name) 顺序（全局 patchText / epinfo 用） */
+	firstAppearanceOrder: CreditRef[] = [];
 	constructor(
 		credits?: Credits,
 		tracks?: Track[][],
@@ -305,6 +310,23 @@ export class Release {
 		// 本次解析的《》引用登记表从空开始（下面的解析全是同步的，整段一次填完）
 		beginQuotedCreatorNames();
 		const credits = _parseSongCredit(raw.credits, name2character);
+
+		// 记录顺序：全局首次出现（顶层 credit_block 优先），以及每首曲目自己的填写顺序。
+		const firstAppearanceOrder: CreditRef[] = [];
+		const trackCreatorOrder: TrackCreatorOrder = new Map();
+		const seenOrder = new Set<string>();
+
+		const recordFirst = (roleID: string, name: string) => {
+			const key = `${roleID}\u0000${name}`;
+			if (seenOrder.has(key)) return;
+			seenOrder.add(key);
+			firstAppearanceOrder.push({ roleID, name });
+		};
+
+		Object.entries(credits).forEach(([roleID, creators]) => {
+			Object.keys(creators).forEach((name) => recordFirst(roleID, name));
+		});
+
 		const all_tracks = raw.discs.map((disc, i) => {
 			// normalize track titles, then coalesce empty titles
             let trackTitles = disc.tracks.map(t => t.title);
@@ -330,6 +352,17 @@ export class Release {
 			// extract credits
 			return compactTracks.map((rt, j) => {
 				const trackCredits = _parseSongCredit(rt.credits, name2character);
+
+				// 这首曲目 credit 行里的成员顺序（Preview / trackCredits 按它排序）
+				const refs: CreditRef[] = [];
+				Object.entries(trackCredits).forEach(([roleID, creators]) => {
+					Object.keys(creators).forEach((name) => {
+						refs.push({ roleID, name });
+						recordFirst(roleID, name);
+					});
+				});
+				trackCreatorOrder.set(`${i + 1}.${j + 1}`, refs);
+
 				Object.entries(trackCredits).forEach(([roleID, creators]) => {
 			const rs = credits[roleID] = credits[roleID] || {};
 					Object.entries(creators).forEach(([name, pd]) => {
@@ -375,6 +408,10 @@ export class Release {
             }));
 		}
 
+		// autofill 补出来的编曲者不在曲目 credit 行里：追加到全局首次出现顺序末尾；
+		// 曲目本地顺序里没有它们，排序时会自然排在该曲目已有成员之后。
+		Object.entries(credits[Role.A] ?? {}).forEach(([name]) => recordFirst(Role.A, name));
+
 		// convert parts from [disc, track][] to (track[])[disc-1]
         Object.values(credits).forEach(creatorData => Object.values(creatorData).forEach(pd => {
 			if (pd.parts.length === 0) return; // empty parts means participation in all tracks
@@ -384,6 +421,8 @@ export class Release {
         }));
 
 		const release = new Release(credits, all_tracks, name2character, options);
+		release.trackCreatorOrder = trackCreatorOrder;
+		release.firstAppearanceOrder = firstAppearanceOrder;
 		await release.assignRelaMap();
 		// release.normalizeCustomRoles();
 		return release;
@@ -722,6 +761,21 @@ export class Release {
                 }));
 			});
 		});
+
+		// 每首曲目按自己的 credit 行顺序恢复成员顺序
+		r.forEach((disc, i) => {
+			disc.forEach((tc, j) => {
+				const refs = this.trackCreatorOrder.get(`${i + 1}.${j + 1}`);
+				if (!refs?.length) return;
+
+				Object.keys(tc).forEach((roleID) => {
+					const roleRefs = refs.filter((ref) => ref.roleID === roleID);
+					if (!roleRefs.length) return;
+					tc[roleID] = sortByCreditOrder(tc[roleID], (name) => name, roleRefs);
+				});
+			});
+		});
+
 		return [r0, r];
 	}
 }

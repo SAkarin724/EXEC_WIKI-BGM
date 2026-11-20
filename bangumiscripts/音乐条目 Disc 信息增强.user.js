@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Bangumi 音乐条目 Disc 信息增强
 // @namespace    org.sakarin.bgm.music.disc.meta.badges
-// @version      0.0.6
+// @version      0.0.7
 // @author       SilenceAkarin, ChatGPT
-// @description  在 Bangumi 音乐条目页中为 Disc 标题追加 [品番] [时长]，并将 Infobox 中的多 Disc 播放时长/品番改为摘要 + 悬浮详情（已并入「音乐条目显示各曲目参与制作人员信息 ++」，两者同时启用时本脚本自动让位）
+// @description  在 Bangumi 音乐条目页把简介里的 Disc 命名内联到曲目列表 Disc 标题，并追加 [品番] [时长]、显示逐曲时长，把 Infobox 中的多 Disc 播放时长/品番改为摘要 + 悬浮详情（已并入「音乐条目显示各曲目参与制作人员信息 ++」，两者同时启用时本脚本自动让位）
 // @match        https://bgm.tv/subject/*
 // @match        https://chii.in/subject/*
 // @match        https://bangumi.tv/subject/*
@@ -20,6 +20,12 @@
     const DURATION_CLASS = 'bgm-ep-duration';
 
     const CATALOG_LABELS = ['品番', '商品番号', '商品编号', '编号', 'Catalog', 'Catalog Number'];
+
+    // Disc 标题上的数据集标记：标题文本会被改写成「Disc N - 名称」，
+    // 碟号与原始标题一律以 dataset 为准，避免重复运行时叠加成「Disc 1 - X - X」
+    const BASE_LABEL_ATTR = 'bgmDiscBaseLabel';
+    const DISC_NO_ATTR = 'bgmDiscNo';
+    const SIG_ATTR = 'bgmDiscSig';
 
     /* ---------- 与合并版共存：检测到合并版就让位 ---------- */
 
@@ -56,6 +62,16 @@
         document.querySelectorAll(OWN_NODE_SELECTOR).forEach((node) => node.remove());
         document.querySelectorAll(`.${DURATION_CLASS}`).forEach((node) => node.remove());
 
+        // 标题被改写成「Disc N - 名称」时还原成原始标题
+        document.querySelectorAll('ul.line_list_music > li.cat').forEach((li) => {
+            const baseLabel = li.dataset[BASE_LABEL_ATTR];
+            if (baseLabel) li.textContent = baseLabel;
+
+            delete li.dataset[BASE_LABEL_ATTR];
+            delete li.dataset[DISC_NO_ATTR];
+            delete li.dataset[SIG_ATTR];
+        });
+
         document.querySelectorAll('.bgm-disc-infobox-host').forEach((node) => {
             node.classList.remove('bgm-disc-infobox-host');
         });
@@ -71,6 +87,18 @@
 
         document.querySelectorAll('[data-bgm-disc-meta-enhanced]').forEach((node) => {
             delete node.dataset.bgmDiscMetaEnhanced;
+        });
+
+        document.querySelectorAll('[data-bgm-disc-base-label]').forEach((node) => {
+            delete node.dataset.bgmDiscBaseLabel;
+        });
+
+        document.querySelectorAll('[data-bgm-disc-no]').forEach((node) => {
+            delete node.dataset.bgmDiscNo;
+        });
+
+        document.querySelectorAll('[data-bgm-disc-sig]').forEach((node) => {
+            delete node.dataset.bgmDiscSig;
         });
 
         const style = document.getElementById(STYLE_ID);
@@ -382,14 +410,26 @@
 
     function cloneWithoutTip(li) {
         const clone = li.cloneNode(true);
+
+        // 多级形态下嵌在 li 内的子项列表不算主值
+        clone.querySelectorAll(':scope > ul').forEach((node) => node.remove());
+
         clone.querySelectorAll('.tip, .bgm-disc-summary, .bgm-disc-popover, .bgm-disc-meta-wrap').forEach((node) => node.remove());
         return normalizeWhitespace(clone.textContent || '');
     }
 
+    /**
+     * 找到「播放时长 / 品番」这类 Infobox 行，并收集它的多级子项。
+     *
+     * bgm 的多级 Infobox 有两种渲染形态，这里都兼容：
+     *   A. 子项是与该行同级的 li.sub：<li class="sub_section">…</li><li class="sub">DISC 1 …</li>
+     *   B. 子项嵌在该行内部的列表里：<li>…<ul><li class="sub">DISC 1 …</li></ul></li>
+     * 单值行（如「品番: ANST-0001~4」）没有子项，subs 为空，主值即品番区间。
+     */
     function getSectionWithSubs(label) {
-        const sections = Array.from(document.querySelectorAll('#infobox li.sub_section, #infobox > li'));
+        const candidates = Array.from(document.querySelectorAll('#infobox li'));
 
-        for (const li of sections) {
+        for (const li of candidates) {
             const tip = li.querySelector(':scope > .tip');
             if (!tip) continue;
 
@@ -397,6 +437,8 @@
             if (tipLabel !== label) continue;
 
             const subs = [];
+
+            // 形态 A：同级兄弟 li.sub
             let next = li.nextElementSibling;
 
             while (
@@ -409,6 +451,11 @@
                 next = next.nextElementSibling;
             }
 
+            // 形态 B：li 内部的列表项
+            if (!subs.length) {
+                li.querySelectorAll(':scope > ul > li').forEach((sub) => subs.push(sub));
+            }
+
             return {
                 section: li,
                 subs,
@@ -419,6 +466,13 @@
         return null;
     }
 
+    /**
+     * 把 `ANST-0001~4` 这类顺序区间品番展开成 DISC 1..N 的映射。
+     *
+     * 数量与碟数一致时一对一展开；品番比碟少时（例如 4 张品番配 5 个 Disc，
+     * 第 5 碟是隐藏轨）按 Disc 1..N 部分填充，多出来的 Disc 不给品番；
+     * 品番比碟多说明数据对不上，不推导，避免错位。
+     */
     function expandSequentialCatalogRange(mainValue, discCount) {
         const text = normalizeWhitespace(mainValue);
         if (!text || !discCount || discCount < 2) return new Map();
@@ -444,12 +498,14 @@
         if (!Number.isFinite(endNum) || endNum < startNum) return new Map();
 
         const expectedCount = endNum - startNum + 1;
-        if (expectedCount !== discCount) return new Map();
+
+        // 品番数量多于 Disc 数：数据不可信，不猜
+        if (expectedCount > discCount) return new Map();
 
         const width = startStr.length;
         const map = new Map();
 
-        for (let i = 0; i < discCount; i++) {
+        for (let i = 0; i < expectedCount; i++) {
             const discNo = i + 1;
             const catalogNo = String(startNum + i).padStart(width, '0');
             map.set(`DISC ${discNo}`, `${prefix}${catalogNo}`);
@@ -544,19 +600,17 @@
     }
 
     function getDiscHeadingNodes() {
-        return Array.from(document.querySelectorAll(
-            '.subject_ep_section .line_detail ul.line_list_music > li.cat, .line_detail ul.line_list_music > li.cat'
-        ));
+        return Array.from(document.querySelectorAll('ul.line_list_music > li.cat'));
     }
 
     function getDiscHeadingCount() {
         const discSet = new Set();
 
         getDiscHeadingNodes().forEach((li) => {
-            const disc = normalizeDiscLabel(li.textContent || '');
-            if (/^DISC \d+$/.test(disc)) {
-                discSet.add(disc);
-            }
+            const text = li.dataset[DISC_NO_ATTR] || li.textContent || '';
+            const m = normalizeDiscLabel(text).match(/DISC\s*(\d+)/);
+
+            if (m) discSet.add(Number(m[1]));
         });
 
         return discSet.size;
@@ -569,41 +623,133 @@
         return span;
     }
 
-    function appendDiscMetaToHeadings(durationInfo, catalogInfo) {
-        const hasDurationForHeadings = shouldUseDurationOnHeadings(durationInfo, catalogInfo);
-        const hasCatalogMulti = !!catalogInfo.hasMulti;
+    /* ----------------简介里的 Disc 命名---------------- */
 
-        // 两边都没有可用于标题的信息，就不用处理
-        if (!hasDurationForHeadings && !hasCatalogMulti) return;
-        const discHeads = getDiscHeadingNodes();
-        if (!discHeads.length) return;
+    function getSummaryText() {
+        const summary = document.querySelector('#subject_summary')
+            || document.querySelector('.subject_summary');
 
-        discHeads.forEach((li) => {
-            if (li.dataset.bgmDiscMetaEnhanced === '1') return;
+        return summary ? String(summary.textContent || '') : '';
+    }
 
-            const disc = normalizeDiscLabel(li.textContent || '');
-            if (!/^DISC \d+$/.test(disc)) return;
+    /**
+     * 从简介尾部解析 Disc 命名：
+     *   Disc 1 - Profectio / DISC 2：Transitus / Disc 3 – Sidera / Disc 4「Perfectio」
+     * 只认行首（允许前面有 - ・ * ※ 之类的列举符号），同一碟号取第一次出现的写法。
+     */
+    function parseDiscNamesFromSummary() {
+        const map = new Map();
+        const text = getSummaryText();
+        if (!text) return map;
 
-            const duration = hasDurationForHeadings ? durationInfo.map.get(disc) : '';
-            const catalog = hasCatalogMulti ? catalogInfo.map.get(disc) : '';
+        for (const rawLine of text.split(/\r?\n/)) {
+            const line = normalizeWhitespace(rawLine)
+                .replace(/^[-–—－・·*※>]+\s*/, '')
+                .trim();
 
-            // 当前这个 Disc 两边都没有数据，就跳过
-            if (!duration && !catalog) return;
+            if (!line) continue;
 
+            const m = line.match(/^disc\s*(\d+)\s*(?:[-–—－:：~～]\s*|\s+)(.+)$/i);
+            if (!m) continue;
+
+            const discNo = Number(m[1]);
+            const name = normalizeWhitespace(m[2])
+                // 简介被折叠时可能把「more...」拼到同一行
+                .replace(/\s*(?:more\.{0,3}|\[?more\]?|展开|收起)\s*$/i, '')
+                .replace(/^[-–—－:：~～]\s*/, '')
+                .trim();
+
+            if (!discNo || !name) continue;
+            if (name.length > 80) continue;      // 明显不是 Disc 命名，跳过
+            if (!map.has(discNo)) map.set(discNo, name);
+        }
+
+        return map;
+    }
+
+    /* ----------------Disc 标题---------------- */
+
+    /**
+     * 取 Disc 标题的「原始标题 + 碟号」。
+     * 首次处理时把原始标题存进 dataset，之后标题文本会被改写，重绘一律以它为基准，
+     * 避免出现「Disc 1 - X - X」这种叠加。
+     */
+    function getHeadingBase(li) {
+        let baseLabel = li.dataset[BASE_LABEL_ATTR] || '';
+
+        if (!baseLabel) {
+            // 先把已经挂上的徽章摘掉再取原始标题
+            const clone = li.cloneNode(true);
+            clone.querySelectorAll('.bgm-disc-meta-wrap').forEach((node) => node.remove());
+
+            const text = normalizeWhitespace(clone.textContent || '');
+            const m = text.match(/^(disc\s*\d+)(?:\s*[-–—－:：]\s*.+)?$/i);
+            if (!m) return null;
+
+            baseLabel = m[1].replace(/^disc\s*/i, 'Disc ');
+        }
+
+        const noMatch = baseLabel.match(/(\d+)/);
+        if (!noMatch) return null;
+
+        const discNo = Number(noMatch[1]);
+        if (!discNo) return null;
+
+        li.dataset[BASE_LABEL_ATTR] = baseLabel;
+        li.dataset[DISC_NO_ATTR] = String(discNo);
+
+        return { discNo, baseLabel };
+    }
+
+    function renderDiscHeading(li, base, parts) {
+        const name = parts.name || '';
+        const catalog = parts.catalog || '';
+        const duration = parts.duration || '';
+
+        const label = name ? `${base.baseLabel} - ${name}` : base.baseLabel;
+        const sig = [base.discNo, name, catalog, duration].join('|');
+
+        const labelOk = normalizeWhitespace(li.textContent || '').startsWith(label);
+        if (li.dataset[SIG_ATTR] === sig && labelOk) return;
+
+        // 整段重建而不是追加，保证多次运行不会叠加
+        li.textContent = label;
+
+        if (catalog || duration) {
             const wrap = document.createElement('span');
             wrap.className = 'bgm-disc-meta-wrap';
 
             // 先放品番，再放时长
-            if (catalog) {
-                wrap.appendChild(createBadge('catalog', catalog));
-            }
-
-            if (duration) {
-                wrap.appendChild(createBadge('duration', duration));
-            }
+            if (catalog) wrap.appendChild(createBadge('catalog', catalog));
+            if (duration) wrap.appendChild(createBadge('duration', duration));
 
             li.appendChild(wrap);
-            li.dataset.bgmDiscMetaEnhanced = '1';
+        }
+
+        li.dataset[SIG_ATTR] = sig;
+    }
+
+    /** 写 Disc 标题：简介里的命名（Disc 1 - Profectio）+ 右侧 [品番] [时长] 徽章 */
+    function enhanceDiscHeadings(durationInfo, catalogInfo, discNames) {
+        const discHeads = getDiscHeadingNodes();
+        if (!discHeads.length) return;
+
+        const useDuration = shouldUseDurationOnHeadings(durationInfo, catalogInfo);
+        const useCatalog = !!catalogInfo.hasMulti;
+
+        if (!useDuration && !useCatalog && !discNames.size) return;
+
+        discHeads.forEach((li) => {
+            const base = getHeadingBase(li);
+            if (!base) return;
+
+            const discKey = `DISC ${base.discNo}`;
+
+            renderDiscHeading(li, base, {
+                name: discNames.get(base.discNo) || '',
+                catalog: useCatalog ? (catalogInfo.map.get(discKey) || '') : '',
+                duration: useDuration ? (durationInfo.map.get(discKey) || '') : '',
+            });
         });
     }
 
@@ -865,6 +1011,43 @@
     }
     /* ----------------时长显示---------------- */
 
+    // 逐曲时长：按 subjectId 缓存，页面生命周期内只请求一次
+    const durationMapCache = new Map();
+    const durationFetching = new Set();
+
+    /** 拉取并缓存逐曲时长（同一页面只请求一次 /subject/{id}/ep） */
+    async function ensurePerTrackDurations() {
+        const epItems = collectHomeEpItems();
+        if (!epItems.length) return;
+
+        const subjectId = getSubjectId();
+        if (!subjectId) return;
+
+        const cached = durationMapCache.get(subjectId);
+        if (cached) {
+            renderDurations(epItems, cached);
+            return;
+        }
+
+        if (durationFetching.has(subjectId)) return;
+
+        durationFetching.add(subjectId);
+
+        try {
+            const map = await fetchDurationMapFromSubjectEpPage(subjectId);
+            durationMapCache.set(subjectId, map);
+
+            if (!map || map.size === 0) return;
+
+            // 请求期间合并版可能已经接管，接管后不要再插时长
+            if (isMergedVersionActive()) return;
+
+            renderDurations(collectHomeEpItems(), map);
+        } finally {
+            durationFetching.delete(subjectId);
+        }
+    }
+
     async function enhance() {
         if (isMergedVersionActive()) {
             yieldToMergedVersion();
@@ -879,26 +1062,26 @@
         const durationInfo = collectDiscMap('播放时长', 'duration');
         const inferredDiscCount = Math.max(durationInfo.map.size, getDiscHeadingCount());
         const catalogInfo = collectCatalogInfo(inferredDiscCount);
+        const discNames = parseDiscNamesFromSummary();
 
         enhanceInfoboxSection(durationInfo, 'duration');
         enhanceInfoboxSection(catalogInfo, 'catalog');
-        appendDiscMetaToHeadings(durationInfo, catalogInfo);
+        enhanceDiscHeadings(durationInfo, catalogInfo, discNames);
 
-        /* ----------------时长显示---------------- */
-        const epItems = collectHomeEpItems();
-        if (!epItems.length) return;
+        await ensurePerTrackDurations();
+    }
 
-        const subjectId = getSubjectId();
-        if (!subjectId) return;
+    /* ----------------监听---------------- */
 
-        const durationMap = await fetchDurationMapFromSubjectEpPage(subjectId);
-        if (!durationMap || durationMap.size === 0) return;
+    let debounceTimer = null;
 
-        // 请求期间合并版可能已经接管，接管后不要再插时长
-        if (isMergedVersionActive()) return;
+    function scheduleEnhance() {
+        if (debounceTimer) return;
 
-        renderDurations(epItems, durationMap);
-        /* ----------------时长显示---------------- */
+        debounceTimer = setTimeout(() => {
+            debounceTimer = null;
+            enhance();
+        }, 80);
     }
 
     function init() {
@@ -916,7 +1099,8 @@
                 return;
             }
 
-            enhance();
+            // 本脚本自己写 DOM 也会触发 mutation，防抖 + 幂等重建避免抖动
+            scheduleEnhance();
         });
 
         ownObserver.observe(document.body, {

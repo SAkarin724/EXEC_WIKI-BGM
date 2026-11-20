@@ -3868,6 +3868,14 @@
             document.querySelectorAll("[data-bgm-disc-meta-enhanced]").forEach(el => {
                 delete el.dataset.bgmDiscMetaEnhanced;
             });
+
+            // 旧脚本改写标题时留下的 dataset 标记一并清掉
+            document.querySelectorAll("[data-bgm-disc-base-label], [data-bgm-disc-no], [data-bgm-disc-sig]")
+                .forEach(el => {
+                    delete el.dataset.bgmDiscBaseLabel;
+                    delete el.dataset.bgmDiscNo;
+                    delete el.dataset.bgmDiscSig;
+                });
         }
 
         /* -------------------- 主流程 -------------------- */

@@ -803,7 +803,10 @@ function parseSongCredit(
 		if (preserveAllSpace) return true;
 		return /[a-zA-Z]$/.test(c0.value) && /^[a-zA-Z]/.test(c2.value);
 	}
-	let cfs_ = [...cfs];
+	// 浅拷贝数组不够：下面的团体吸收 / 粘连会直接改 CreditField.value。
+	// 不拷贝对象会把 raw release 的原始 credit 字段改掉，
+	// 下一次 reparse（改设置 / 关联人物）就会在已合并的文本上重复处理。
+	let cfs_ = cfs.map((cf) => ({ ...cf }));
 	/**
 	 * 先把 `《 … 》` 收成一个 creator。
 	 * 书名号里整段就是一个名字（不管里面是 `MoAE:.` 还是 `A & B`），

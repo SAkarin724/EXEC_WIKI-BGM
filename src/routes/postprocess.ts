@@ -239,6 +239,17 @@ interface Credits {
 	};
 }
 
+/**
+ * 解析时的真实插入顺序（roleID -> 名字[]）。
+ * 不能依赖 `Object.keys`：`11`、`48` 这类纯数字名字会被 JS 当成整数键，
+ * 无论插入顺序如何都会排到对象的最前面。
+ */
+const CREDIT_ORDER = Symbol('creditOrder');
+
+type CreditsWithOrder = Credits & {
+	[CREDIT_ORDER]?: Map<string, string[]>;
+};
+
 interface CreditsText { [roleID: string]: string[]; } // { roleID: [name, ...] }
 
 export interface Track {
@@ -323,9 +334,14 @@ export class Release {
 			firstAppearanceOrder.push({ roleID, name });
 		};
 
-		Object.entries(credits).forEach(([roleID, creators]) => {
-			Object.keys(creators).forEach((name) => recordFirst(roleID, name));
-		});
+		const topOrder = (credits as CreditsWithOrder)[CREDIT_ORDER];
+		if (topOrder) {
+			topOrder.forEach((names, roleID) => names.forEach((name) => recordFirst(roleID, name)));
+		} else {
+			Object.entries(credits).forEach(([roleID, creators]) => {
+				Object.keys(creators).forEach((name) => recordFirst(roleID, name));
+			});
+		}
 
 		const all_tracks = raw.discs.map((disc, i) => {
 			// normalize track titles, then coalesce empty titles
@@ -353,14 +369,25 @@ export class Release {
 			return compactTracks.map((rt, j) => {
 				const trackCredits = _parseSongCredit(rt.credits, name2character);
 
-				// 这首曲目 credit 行里的成员顺序（Preview / trackCredits 按它排序）
+				// 这首曲目 credit 行里的成员顺序（Preview / trackCredits 按它排序）。
+				// 用解析时记录的真实顺序，而不是 Object.keys —— `11` 这类数字名会被重排到最前。
 				const refs: CreditRef[] = [];
-				Object.entries(trackCredits).forEach(([roleID, creators]) => {
-					Object.keys(creators).forEach((name) => {
-						refs.push({ roleID, name });
-						recordFirst(roleID, name);
+				const trackOrder = (trackCredits as CreditsWithOrder)[CREDIT_ORDER];
+				if (trackOrder) {
+					trackOrder.forEach((names, roleID) => {
+						names.forEach((name) => {
+							refs.push({ roleID, name });
+							recordFirst(roleID, name);
+						});
 					});
-				});
+				} else {
+					Object.entries(trackCredits).forEach(([roleID, creators]) => {
+						Object.keys(creators).forEach((name) => {
+							refs.push({ roleID, name });
+							recordFirst(roleID, name);
+						});
+					});
+				}
 				trackCreatorOrder.set(`${i + 1}.${j + 1}`, refs);
 
 				Object.entries(trackCredits).forEach(([roleID, creators]) => {
@@ -465,6 +492,14 @@ export class Release {
 			return roleID;
 		}
 
+		// `Object.keys` 会把 `11` 这样的数字名排到最前；
+		// 用解析时记录的真实首次出现顺序做 fa 相同时的 tie-break。
+		const firstRank = new Map<string, number>();
+		this.firstAppearanceOrder.forEach((ref, i) => {
+			const key = `${ref.roleID}\u0000${ref.name}`;
+			if (!firstRank.has(key)) firstRank.set(key, i);
+		});
+
 		const rs = Object.entries(this.credits).map(([roleID, creators]) => {
             const fa = Object.fromEntries(Object.entries(creators).map(([c, { parts }]) => [c, firstAppear(parts)]));
 			// 艺术家职位开关开着时保留连接词写法（`MK & Kanae Asaba`）；
@@ -476,7 +511,13 @@ export class Release {
 			const names: string[] = [];
 
 			Object.entries(creators)
-				.sort(([a, _], [b, __]) => fa[a] - fa[b])
+				.sort(([a, _], [b, __]) => {
+					const byAppear = fa[a] - fa[b];
+					if (byAppear) return byAppear;
+					const ra = firstRank.get(`${roleID}\u0000${a}`) ?? Number.MAX_SAFE_INTEGER;
+					const rb = firstRank.get(`${roleID}\u0000${b}`) ?? Number.MAX_SAFE_INTEGER;
+					return ra - rb;
+				})
 				.forEach(([c, _]) => {
 					const entries: [string, string | undefined][] = keepComposed
 						? [[c, name2staff.get(c)?.[0]?.name]]
@@ -776,6 +817,12 @@ export class Release {
 			});
 		});
 
+		// 条目级（parts 为空）也按首次出现顺序
+		Object.entries(r0).forEach(([roleID, names]) => {
+			const refs = this.firstAppearanceOrder.filter((ref) => ref.roleID === roleID);
+			r0[roleID] = sortByCreditOrder(names, (name) => name, refs);
+		});
+
 		return [r0, r];
 	}
 }
@@ -968,6 +1015,7 @@ function parseSongCredit(
 	}
 	// assign creators to roles (and mental gymnastics for parts & CVs)
 	let credits: Credits = {};
+	const creditOrder = new Map<string, string[]>();
 	let roleIDs = new Set<string>();
 	let lastPersonData: PersonData[] | null = null; // role: creator(parts), ...
 	let lastRoleParts: [number, number][] | null = null; // role(parts): creator
@@ -1013,6 +1061,11 @@ function parseSongCredit(
 				if (pendingQuoted) markQuotedCreatorName(name);
                 lastPersonData = Array.from(roleIDs).map(rid => {
                     const rs = credits[rid] = credits[rid] || {};
+                    if (!(name in rs)) {
+                        const names = creditOrder.get(rid) ?? [];
+                        names.push(name);
+                        creditOrder.set(rid, names);
+                    }
                     return rs[name] = rs[name] || new PersonData();
 				});
 				if (lastRoleParts) {
@@ -1030,6 +1083,7 @@ function parseSongCredit(
 				break;
 		}
 	});
+	(credits as CreditsWithOrder)[CREDIT_ORDER] = creditOrder;
 	return credits;
 }
 

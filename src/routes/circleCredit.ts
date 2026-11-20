@@ -56,6 +56,14 @@ function isReservedParenContent(content: string): boolean {
 	);
 }
 
+/**
+ * 团体标注和前面人名之间的空白只保留一个。
+ * 没有空白时保持紧贴（`早餐@A8RECORDS` / `VeetaCrush(Dash Sound)`）。
+ */
+function normalizeLeadingSpace(suffix: string): string {
+	return suffix.replace(/^\s+/, ' ');
+}
+
 /** 规范化后的包含判断：括号里是名字里已有的别名（`ぐぅせぇguse (ぐぅせぇ)`），不当团体 */
 function containsNormalizedText(haystack: string, needle: string): boolean {
 	if (needle.trim().length < 2) return false;
@@ -78,7 +86,7 @@ function splitAtMark(text: string): CircleSplit | null {
 	const head = text.slice(0, start).trim();
 	if (!head) return null;
 
-	return { name: head, suffix: text.slice(start), kind: 'at' };
+	return { name: head, suffix: normalizeLeadingSpace(text.slice(start)), kind: 'at' };
 }
 
 function splitTrailingParen(text: string): CircleSplit | null {
@@ -91,7 +99,7 @@ function splitTrailingParen(text: string): CircleSplit | null {
 	const head = text.slice(0, m.index).trim();
 	if (!head || containsNormalizedText(head, content)) return null;
 
-	return { name: head, suffix: text.slice(m.index), kind: 'paren' };
+	return { name: head, suffix: normalizeLeadingSpace(text.slice(m.index)), kind: 'paren' };
 }
 
 /**

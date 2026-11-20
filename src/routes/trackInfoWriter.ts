@@ -72,7 +72,7 @@ function writeTrackInfoCreditImport(info: Release): string {
                 t += formatCreditsInputOrder(tr.credits);
             }
             return t;
-        }).join('\n');
+        }).join('\n\n'); // 曲目之间空一行，导入后更易读，也方便按曲目定位
         return s;
     }).join('\n');
 

@@ -41,6 +41,12 @@
 
 	let currentRawRelease: Readonly<RawRelease> = $state.raw({ credits: [], discs: [] });
 	let currentRelease: Readonly<Release> = $state.raw(new Release());
+	/**
+	 * 导入源写入的曲目信息解析时，保留 `(Dash Sound)` 这类纯文本团体标注。
+	 * 这不是用户手输的文本，而是 Patch / 第三方数据里的原始内容，
+	 * 不应受「去除人名后括号内的社团名」设置影响；下一次手输仍按设置解析。
+	 */
+	let preserveCircleParenthesesOnNextParse = false;
 	let dupResolution = $state(new SvelteMap<string, number>());
 	let dupResolutionEntries = $derived(Array.from(dupResolution.entries()));
 	// Creators whose bgm relation was manually removed (clicked away in the Gallery).
@@ -195,8 +201,12 @@
 	}
 	$effect(() => {
 		// Update currentRelease (for Preview) whenever currentRawRelease or settingsState changes
-		Release.fromRawRelease(currentRawRelease, settingsState.val).then((release) => {
+		const options = preserveCircleParenthesesOnNextParse
+			? { ...settingsState.val, shouldCleanCircleParentheses: false }
+			: settingsState.val;
+		Release.fromRawRelease(currentRawRelease, options).then((release) => {
 			currentRelease = release;
+			preserveCircleParenthesesOnNextParse = false;
 		});
 	});
 	$effect(() => {
@@ -288,9 +298,11 @@
 			if (intro) descState.val = intro;
 		},
 		setTrackInfo: (info: InfoRelease, style: 'parts' | 'tracks' | 'default' = 'default') => {
+			preserveCircleParenthesesOnNextParse = true;
 			trackInfoState.val = writeTrackInfo(info, style);
 		},
 		setTrackInfoText: (text: string) => {
+			preserveCircleParenthesesOnNextParse = true;
 			trackInfoState.val = text;
 		},
 		setInfoBox: (content: string, override: boolean) => {

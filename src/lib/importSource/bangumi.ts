@@ -67,8 +67,8 @@ export class Bangumi implements ImportSource {
             });
 
             // 优先采用 Patch 补丁（staff 修复仓库）提供的信息，而不是默认导入的信息。
-            // 命中 patch 时用 parts 风格写出（曲目号用 (1,3-5) 标记），方便后续
-            // 用 Ctrl+Shift+Y 在 parts / tracks 之间切换。
+            // 直接从每首曲目的结构化 trackCredits / epinfo 重建，不使用 rawPatches.editor。
+            // applyStaffPatchToRelease 只替换 credits，曲目结构仍沿用默认导入结果。
             if (opts.patch) {
                 const patch = await fetchStaffPatch(this.sid);
                 if (patch) {

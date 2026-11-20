@@ -91,133 +91,13 @@ async function fetchFromWorker(subjectId: number): Promise<StaffPatchContent | n
 }
 
 // ---------------------------------------------------------------------------
-// 解析 rawPatches.editor（人员修复输入区的原始文本）
-// 格式：`角色：名字(1,3-5)、名字(2)、...`，逐行解析。
-// 该文本本身就是本项目 rkgk 使用的职位/曲目格式，因此无需再做职位名映射。
+// 从结构化 trackCredits / epinfo 还原 Credits
 // ---------------------------------------------------------------------------
-
-const INPUT_SPLITTERS = new Set(["、", "，", ",", "/", "／", "\\", "|", "｜", ";", "；"]);
-
-function splitOutsideParens(text: string): string[] {
-	const result: string[] = [];
-	let buf = "";
-	let parenDepth = 0;
-	let quoteDepth = 0;
-	let bracketDepth = 0;
-
-	for (const ch of text) {
-		if (ch === "(" || ch === "（") parenDepth++;
-		if (ch === ")" || ch === "）") parenDepth = Math.max(0, parenDepth - 1);
-		if (ch === "《") quoteDepth++;
-		if (ch === "》") quoteDepth = Math.max(0, quoteDepth - 1);
-		if (ch === "[") bracketDepth++;
-		if (ch === "]") bracketDepth = Math.max(0, bracketDepth - 1);
-
-		if (parenDepth === 0 && quoteDepth === 0 && bracketDepth === 0 && INPUT_SPLITTERS.has(ch)) {
-			if (buf.trim()) result.push(buf.trim());
-			buf = "";
-		} else {
-			buf += ch;
-		}
-	}
-	if (buf.trim()) result.push(buf.trim());
-	return result;
-}
-
-function isTrackExpr(expr: string): boolean {
-	const parts = expr.split(",").map((s) => s.trim()).filter(Boolean);
-	if (!parts.length) return false;
-	return parts.every((part) => /^(\d+)(?:\.(\d+))?(?:-(\d+))?$/.test(part));
-}
-
-function extractTrailingTrackExpr(entry: string): { name: string; trackExpr: string } | null {
-	const s = entry.trim();
-	if (!s.endsWith(")")) return null;
-
-	let depth = 0;
-	for (let i = s.length - 1; i >= 0; i--) {
-		const ch = s[i];
-		if (ch === ")") {
-			depth++;
-		} else if (ch === "(") {
-			depth--;
-			if (depth === 0) {
-				const inside = s.slice(i + 1, s.length - 1).trim();
-				if (isTrackExpr(inside)) {
-					return { name: s.slice(0, i).trim(), trackExpr: inside };
-				}
-				return null;
-			}
-		}
-	}
-	return null;
-}
-
-function expandTrackExpr(expr: string): string[] {
-	const out: string[] = [];
-	for (const raw of expr.split(",")) {
-		const part = raw.trim();
-		const m = /^(\d+)(?:\.(\d+))?(?:-(\d+))?$/.exec(part);
-		if (!m) continue;
-		const disc = m[2] ? Number(m[1]) : 1;
-		const start = m[2] ? Number(m[2]) : Number(m[1]);
-		const end = m[3] ? Number(m[3]) : start;
-		for (let i = start; i <= end; i++) out.push(`${disc}.${i}`);
-	}
-	return out;
-}
-
-/**
- * 把 rawPatches.editor 里的一条名字还原成 rkgk 的原始名字：
- * - 去掉尾部的圈名 `(circle)`（如 `《Masahiro "Godspeed" Aoki》 (Godspeed)` 中的
- *   `(Godspeed)`），但保留 `(CV...)` 之类的 CV 结构；
- * - 去掉包裹书名号《》，因为 Credits 里存的是未加书名号的原始名字，书名号会在
- *   写出时由 nameEscape 自动补回。
- */
-function normalizeName(name: string): string {
-	let s = name.trim();
-	s = s.replace(/\s*[(（](?!CV[：:.])[^)）]*[)）]$/, "").trim();
-	if (s.startsWith("《") && s.endsWith("》")) s = s.slice(1, -1).trim();
-	return s;
-}
 
 interface ParsedCredits {
 	epinfo: Credits;
 	tracks: Record<string, Credits>;
 }
-
-function parseEditorText(editor: string): ParsedCredits {
-	const epinfo: Credits = {};
-	const tracks: Record<string, Credits> = {};
-
-	const lines = editor.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-	for (const line of lines) {
-		const m = line.match(/^(.+?)\s*[:：﹕︰;；|｜=＝]\s*(.+)$/);
-		if (!m) continue;
-		const role = m[1].trim();
-		if (!role) continue;
-
-		for (const entry of splitOutsideParens(m[2])) {
-			const extracted = extractTrailingTrackExpr(entry);
-			if (extracted) {
-				const name = normalizeName(extracted.name);
-				for (const trackKey of expandTrackExpr(extracted.trackExpr)) {
-					const map = (tracks[trackKey] ??= {});
-					if (name) (map[role] ??= []).push(name);
-				}
-			} else {
-				const name = normalizeName(entry);
-				if (name) (epinfo[role] ??= []).push(name);
-			}
-		}
-	}
-
-	return { epinfo, tracks };
-}
-
-// ---------------------------------------------------------------------------
-// 回退路径：当没有 rawPatches.editor 时，从结构化 trackCredits / epinfo 还原
-// ---------------------------------------------------------------------------
 
 /** roleKey -> BGM 职位名。写入侧（生成 patch_content）用它的反查表。 */
 export const PATCH_ROLE_TO_BGM: Record<string, string> = {
@@ -316,24 +196,20 @@ function trackCreditsToMaps(patch: StaffPatchContent): ParsedCredits {
 }
 
 // ---------------------------------------------------------------------------
-// 解析：优先 rawPatches.editor，解析不出内容时再退回结构化 trackCredits / epinfo
+// 解析：直接读每首曲目的结构化 trackCredits / epinfo 重建。
+//
+// 不使用 rawPatches.editor：它只是展示文本，重新解析会丢掉团体标注、别名写法和
+// 原始空格。结构化的 trackCredits / epinfo 才是导入的权威数据。
 // ---------------------------------------------------------------------------
 
 function parsePatchCredits(patch: StaffPatchContent): ParsedCredits {
-	const editor = patch.rawPatches?.editor?.trim();
-	if (editor) {
-		const parsed = parseEditorText(editor);
-		if (Object.keys(parsed.epinfo).length || Object.keys(parsed.tracks).length) {
-			return parsed;
-		}
-	}
 	return trackCreditsToMaps(patch);
 }
 
 // ---------------------------------------------------------------------------
 // 应用：Patch 独占
 //
-// 命中 Patch（优先 rawPatches.editor）时，条目级与曲目级的制作人员信息完全以
+// 命中 Patch（从结构化 trackCredits / epinfo 重建）时，条目级与曲目级的制作人员信息完全以
 // Patch 为准，不再并入默认导入（页面 infobox / 关联人物）的残留。
 // 否则页面上的 `乐器：Guitar：ケンシロー`、`编曲：Orchestral Arrangement：…`
 // 这类无法解析的 infobox 片段会把 Patch 结果污染，并和 Patch 的逐曲目信息重复。

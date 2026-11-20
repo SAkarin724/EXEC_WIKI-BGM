@@ -263,10 +263,16 @@ export interface Track {
  * 单个字符的别名太容易误判（例如 别名「空」、名字「天空」），不参与判断。
  */
 export function containsNormalizedName(haystack: string, needle: string): boolean {
-	if (needle.trim().length < 2) return false;
+	const n = needle.trim();
+	if (!n) return false;
 
 	const norm = (s: string) => s.normalize('NFKC').toLowerCase();
-	return norm(haystack).includes(norm(needle.trim()));
+	const nh = norm(haystack);
+	const nn = norm(n);
+
+	// 单字符只认全等，避免「空」误命中「天空」；完全相等（b / b）仍要算包含
+	if (nn.length < 2) return nh === nn;
+	return nh.includes(nn);
 }
 
 /**

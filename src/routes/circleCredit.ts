@@ -66,10 +66,16 @@ function normalizeLeadingSpace(suffix: string): string {
 
 /** 规范化后的包含判断：括号里是名字里已有的别名（`ぐぅせぇguse (ぐぅせぇ)`），不当团体 */
 function containsNormalizedText(haystack: string, needle: string): boolean {
-	if (needle.trim().length < 2) return false;
+	const n = needle.trim();
+	if (!n) return false;
 
 	const norm = (s: string) => s.normalize('NFKC').toLowerCase();
-	return norm(haystack).includes(norm(needle.trim()));
+	const nh = norm(haystack);
+	const nn = norm(n);
+
+	// 单字符只认全等，避免「空」误命中「天空」；完全相等（b / b）仍要算冗余别名
+	if (nn.length < 2) return nh === nn;
+	return nh.includes(nn);
 }
 
 function splitAtMark(text: string): CircleSplit | null {

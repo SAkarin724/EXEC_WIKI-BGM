@@ -68,11 +68,11 @@ export class Bangumi implements ImportSource {
 
             // 优先采用 Patch 补丁（staff 修复仓库）提供的信息，而不是默认导入的信息。
             // 直接从每首曲目的结构化 trackCredits / epinfo 重建，不使用 rawPatches.editor。
-            // applyStaffPatchToRelease 只替换 credits，曲目结构仍沿用默认导入结果。
+            // 用 import 写法写出：每首曲目按 credits 原顺序单独成行，不被全专辑聚合重排。
             if (opts.patch) {
                 const patch = await fetchStaffPatch(this.sid);
                 if (patch) {
-                    editor.setTrackInfo(applyStaffPatchToRelease(patch, release), 'parts');
+                    editor.setTrackInfo(applyStaffPatchToRelease(patch, release), 'import');
                 } else {
                     editor.setTrackInfo(release);
                 }

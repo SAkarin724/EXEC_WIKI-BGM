@@ -297,7 +297,7 @@
 			if (title) titleState.val = title;
 			if (intro) descState.val = intro;
 		},
-		setTrackInfo: (info: InfoRelease, style: 'parts' | 'tracks' | 'default' = 'default') => {
+		setTrackInfo: (info: InfoRelease, style: 'parts' | 'tracks' | 'import' | 'default' = 'default') => {
 			preserveCircleParenthesesOnNextParse = true;
 			trackInfoState.val = writeTrackInfo(info, style);
 		},

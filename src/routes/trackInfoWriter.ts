@@ -12,10 +12,11 @@ const RE_LATIN_SPACE = /[A-Za-z] [A-Za-z]/;
 
 export { type Release };
 
-export function writeTrackInfo(info: Release, style: 'parts' | 'tracks' | 'default' = 'default'): string {
+export function writeTrackInfo(info: Release, style: 'parts' | 'tracks' | 'import' | 'default' = 'default'): string {
     switch (style) {
         case 'parts': return writeTrackInfoCreditParts(info);
         case 'tracks': return writeTrackInfoCreditTracks(info);
+        case 'import': return writeTrackInfoCreditImport(info);
     }
     // Use the parts-style credits only for simple cases; otherwise use the tracks-style credits.
     if (info.discs.length > 1) return writeTrackInfoCreditTracks(info);
@@ -49,6 +50,40 @@ function writeTrackInfoCreditTracks(info: Release): string {
         return s;
     }).join('\n');
     return trackInfo;
+}
+
+/**
+ * 导入专用的曲目信息：每首曲目按 credits 里的角色 / 成员原顺序写成
+ * `角色：名字、名字`，不合并到全专辑的聚合行，也不按人名重排。
+ * 这样 parser 重新读入后，Preview / patch 的每首曲目成员顺序与 Patch 一致。
+ */
+function writeTrackInfoCreditImport(info: Release): string {
+    const isMulti = info.discs.length > 1;
+    let trackInfo = Object.keys(info.credits).length > 0 ? formatCreditsInputOrder(info.credits) + '\n' : '';
+
+    trackInfo += info.discs.map((disc) => {
+        let s = isMulti ? "\nDISC\n" : "";
+        s += disc.tracks.map((tr, i) => {
+            let t = disc.tracks.length > 1 ? `${String(i + 1).padStart(2, '0')} ${tr.title}` : tr.title;
+            t = RE_ROLE_KEYWORD.test(t) ? `《${t}》` : t;
+            if (tr.comment) t += ` // ${tr.comment}`;
+            t += '\n';
+            if (Object.keys(tr.credits).length > 0) {
+                t += formatCreditsInputOrder(tr.credits);
+            }
+            return t;
+        }).join('\n');
+        return s;
+    }).join('\n');
+
+    return trackInfo;
+}
+
+/** 按 credits 里的角色顺序、成员数组顺序写成 rkgk 的 `角色：名字、名字` */
+function formatCreditsInputOrder(credits: Credits): string {
+    return orderedEntries(credits)
+        .map(([role, names]) => `${role}：${names.map(nameEscape).join('、')}`)
+        .join('\n');
 }
 
 function writeTrackInfoCreditParts(info: Release): string {

@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Bangumi 音乐条目 Disc 信息增强
 // @namespace    org.sakarin.bgm.music.disc.meta.badges
-// @version      0.0.5
+// @version      0.0.6
 // @author       SilenceAkarin, ChatGPT
-// @description  在 Bangumi 音乐条目页中为 Disc 标题追加 [品番] [时长]，并将 Infobox 中的多 Disc 播放时长/品番改为摘要 + 悬浮详情
+// @description  在 Bangumi 音乐条目页中为 Disc 标题追加 [品番] [时长]，并将 Infobox 中的多 Disc 播放时长/品番改为摘要 + 悬浮详情（已并入「音乐条目显示各曲目参与制作人员信息 ++」，两者同时启用时本脚本自动让位）
 // @match        https://bgm.tv/subject/*
 // @match        https://chii.in/subject/*
 // @match        https://bangumi.tv/subject/*
@@ -20,6 +20,73 @@
     const DURATION_CLASS = 'bgm-ep-duration';
 
     const CATALOG_LABELS = ['品番', '商品番号', '商品编号', '编号', 'Catalog', 'Catalog Number'];
+
+    /* ---------- 与合并版共存：检测到合并版就让位 ---------- */
+
+    // 合并版「音乐条目显示各曲目参与制作人员信息 ++」内置了本脚本的全部功能，
+    // 会接管 Disc 标题与 Infobox；检测到它之后本脚本直接退出，
+    // 并把自己已经插入的节点 / 样式清掉，避免两套显示重复或互相覆盖。
+    const MERGED_FLAG = '__BGM_DISC_META_MERGED__';
+
+    const OWN_NODE_SELECTOR = [
+        '.bgm-disc-meta-wrap',
+        '.bgm-disc-summary',
+        '.bgm-disc-popover'
+    ].join(', ');
+
+    let ownObserver = null;
+
+    function isMergedVersionActive() {
+        try {
+            return !!window[MERGED_FLAG];
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function stopOwnObserver() {
+        if (!ownObserver) return;
+
+        ownObserver.disconnect();
+        ownObserver = null;
+    }
+
+    /** 清掉本脚本插入的节点 / 样式，并还原被折叠的 Infobox 子项 */
+    function cleanupOwnDom() {
+        document.querySelectorAll(OWN_NODE_SELECTOR).forEach((node) => node.remove());
+        document.querySelectorAll(`.${DURATION_CLASS}`).forEach((node) => node.remove());
+
+        document.querySelectorAll('.bgm-disc-infobox-host').forEach((node) => {
+            node.classList.remove('bgm-disc-infobox-host');
+        });
+
+        // 多碟子项是被本脚本设成 display:none 的，还原回页面原样
+        document.querySelectorAll('#infobox li.sub').forEach((node) => {
+            node.style.display = '';
+        });
+
+        document.querySelectorAll('[data-bgm-disc-section-enhanced]').forEach((node) => {
+            delete node.dataset.bgmDiscSectionEnhanced;
+        });
+
+        document.querySelectorAll('[data-bgm-disc-meta-enhanced]').forEach((node) => {
+            delete node.dataset.bgmDiscMetaEnhanced;
+        });
+
+        const style = document.getElementById(STYLE_ID);
+        if (style) style.remove();
+    }
+
+    /** 彻底退出：断开 observer 并清理自身 DOM */
+    function yieldToMergedVersion() {
+        stopOwnObserver();
+        cleanupOwnDom();
+    }
+
+    if (isMergedVersionActive()) {
+        yieldToMergedVersion();
+        return;
+    }
 
     function normalizeWhitespace(text) {
         return String(text || '')
@@ -799,6 +866,11 @@
     /* ----------------时长显示---------------- */
 
     async function enhance() {
+        if (isMergedVersionActive()) {
+            yieldToMergedVersion();
+            return;
+        }
+
         if (!isSubjectPage()) return;
         if (!isLikelyMusicSubjectPage()) return;
 
@@ -822,18 +894,32 @@
         const durationMap = await fetchDurationMapFromSubjectEpPage(subjectId);
         if (!durationMap || durationMap.size === 0) return;
 
+        // 请求期间合并版可能已经接管，接管后不要再插时长
+        if (isMergedVersionActive()) return;
+
         renderDurations(epItems, durationMap);
         /* ----------------时长显示---------------- */
     }
 
     function init() {
+        if (isMergedVersionActive()) {
+            yieldToMergedVersion();
+            return;
+        }
+
         enhance();
 
-        const observer = new MutationObserver(() => {
+        // observer 保存到模块作用域，合并版接管时才能断开
+        ownObserver = new MutationObserver(() => {
+            if (isMergedVersionActive()) {
+                yieldToMergedVersion();
+                return;
+            }
+
             enhance();
         });
 
-        observer.observe(document.body, {
+        ownObserver.observe(document.body, {
             childList: true,
             subtree: true,
         });

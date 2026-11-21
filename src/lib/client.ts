@@ -31,77 +31,28 @@ export interface SubjectRelaPerson {
 
 const RELEVANT_CAREERS = new Set(['artist', 'illustrator']);
 
-/** 归一化后比较：全半角统一、去掉空白、小写 */
-function normalizeSearchName(name: string): string {
-    return name.normalize('NFKC').replace(/\s+/g, '').toLowerCase();
-}
-
-/** 精确同名 > 别名命中 > 前缀命中，其余保持来源顺序（BGMR 的相关度排名） */
-function matchScore(staff: Staff, query: string): number {
-    const staffName = normalizeSearchName(staff.name);
-    const aliases = staff.aliases.map(normalizeSearchName);
-    if (staffName === query) {
-        return 3;
-    }
-    if (aliases.includes(query)) {
-        return 2;
-    }
-    if (staffName.startsWith(query) || aliases.some((alias) => alias.startsWith(query))) {
-        return 1;
-    }
-    return 0;
-}
-
-function rankPerson(staffs: Staff[], query: string): Staff[] {
-    const target = normalizeSearchName(query);
-    const ranked = staffs.map((staff, index) => ({ staff, index, score: matchScore(staff, target) }));
-    ranked.sort((a, b) => b.score - a.score || a.index - b.index);
-    return ranked.map((r) => r.staff);
-}
-
-/** BGMR 的结果不带头像，缺的批量补一次；接口挂了就留空，界面会显示默认图 */
-async function fillPersonPfp(staffs: Staff[]): Promise<Staff[]> {
-    const missingPfp = staffs.filter((s) => !s.pfp).map((s) => s.id);
-    if (missingPfp.length === 0) {
-        return staffs;
-    }
-    const namePfpList = await getPersonPfpList(missingPfp).catch(() => null);
-    if (namePfpList === null) {
-        return staffs;
-    }
-    const pfpById = new Map(missingPfp.map((pid, i) => [pid, namePfpList[i].pfp]));
-    for (const staff of staffs) {
-        if (!staff.pfp && pfpById.has(staff.id)) {
-            staff.pfp = pfpById.get(staff.id) as string;
-        }
-    }
-    return staffs;
-}
-
 export async function searchPerson(name: string): Promise<Staff[]> {
-    const query = name.trim();
-    if (query === '') {
+    if (name === '') {
         return [];
     }
-    // BGM API 的人物搜索索引不可靠：会漏条（例如 31411 河野ひより 根本不在结果里）、
-    // 按 ID 排序而不是相关度、默认只给 10 条。所以优先用按相关度排、命中更全的 BGMR，
-    // 它报错或者没搜到东西，才退回 BGM API。
-    const bgmrResult = await searchPersonBGMR(query).catch(() => [] as BGMRPerson[]);
-    if (bgmrResult.length > 0) {
-        const staffs = bgmrResult.map((r) => ({ id: r.id, pfp: '', name: r.name, aliases: r.aliases }));
-        return fillPersonPfp(rankPerson(staffs, query));
+    const result = await searchPersonBGMAPI(name);
+    if (result.length === 0) {
+        return [];
     }
-    const apiResult = await searchPersonBGMAPI(query).catch(() => [] as Staff[]);
-    return rankPerson(apiResult, query);
+    if (result[0].pfp) {
+        return result;
+    }
+    const pids = result.map((r) => r.id);
+    const namePfpList = await getPersonPfpList(pids);
+    return result.map((r: any, i: number) => ({
+        id: r.id,
+        pfp: namePfpList[i].pfp,
+        name: r.name,
+        aliases: r.aliases
+    }));
 }
 
-interface BGMRPerson {
-    id: number;
-    name: string;
-    aliases: string[];
-}
-
-async function searchPersonBGMR(name: string): Promise<BGMRPerson[]> {
+async function searchPersonBGMR(name: string): Promise<{ id: number, name: string, aliases: string[] }[]> {
     const request = new Request(`${CORS_ENDPOINT}/graphql`, {
         method: 'POST',
         mode: 'cors',
@@ -117,8 +68,7 @@ async function searchPersonBGMR(name: string): Promise<BGMRPerson[]> {
 }
 
 async function searchPersonBGMAPI(name: string): Promise<Staff[]> {
-    // 默认一页只有 10 条，拿到上限 20 条，少漏一些同名人物
-    const request = new Request(`${BGMAPI_ENDPOINT}/v0/search/persons?limit=20`, {
+    const request = new Request(`${BGMAPI_ENDPOINT}/v0/search/persons`, {
         method: 'POST',
         mode: 'cors',
         body: JSON.stringify({ keyword: name }),

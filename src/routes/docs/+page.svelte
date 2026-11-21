@@ -270,6 +270,59 @@ Compose／Jeet Singh<span class="text-bgm-pink">(Tr.1-4,8)</span>, Salita<span c
 	<section>
 		<h2 id="shortcut-reference">快捷键列表</h2>
 		<section>
+			<h3 id="shortcut-copy-patch">「复制 Patch」按钮</h3>
+			<p>把鼠标悬停在按钮上，再按住修饰键，按钮会切换成对应的功能。</p>
+			<table>
+				<tbody>
+					<tr>
+						<td>（不按修饰键）</td>
+						<td>只复制符合条件的 Patch</td>
+					</tr>
+					<tr>
+						<td><kbd>shift</kbd></td>
+						<td>复制全部 Patch</td>
+					</tr>
+					<tr>
+						<td><kbd>{altOrOpt}</kbd></td>
+						<td>复制曲目表（<code>光盘|曲目|原文标题|简体中文标题|时长</code>）</td>
+					</tr>
+					<tr>
+						<td><kbd>{altOrOpt}</kbd> + <kbd>shift</kbd></td>
+						<td>
+							导出曲目列表（<code>DISC N</code> 与 <code>01 曲名 mm:ss</code>，多碟每碟前写 DISC
+							N，单碟省略 DISC 行）
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</section>
+		<section>
+			<h3 id="shortcut-pack">「打包带走！」按钮</h3>
+			<p>同样是悬停 + 修饰键。按住 <kbd>{altOrOpt}</kbd> 时优先只复制关联信息。</p>
+			<table>
+				<tbody>
+					<tr>
+						<td>（不按修饰键）</td>
+						<td>按「默认将打包升级为二连击」的设置复制打包数据</td>
+					</tr>
+					<tr>
+						<td><kbd>shift</kbd></td>
+						<td>
+							反转上面的设置：设为二连击时变回单次打包，未设为二连击时打包后打开新建条目页
+						</td>
+					</tr>
+					<tr>
+						<td><kbd>{altOrOpt}</kbd></td>
+						<td>只复制关联信息，不打开新建条目页</td>
+					</tr>
+					<tr>
+						<td><kbd>{ctrlOrCmd}</kbd> + <kbd>shift</kbd></td>
+						<td>极速打包带走：立刻打开新建音乐条目页，并且带上封面</td>
+					</tr>
+				</tbody>
+			</table>
+		</section>
+		<section>
 			<h3>Infobox 编辑器</h3>
 			<table>
 				<tbody>

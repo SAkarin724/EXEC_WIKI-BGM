@@ -116,18 +116,18 @@
 	/**
 	 * 「导出曲目列表」的纯文本：多碟时每碟前写 `DISC N`，单碟直接输出曲目行。
 	 * 曲目号按碟重新从 01 起；没有时长的曲目只写曲目号与曲名。
+	 * 多碟时碟与碟之间空一行，方便肉眼分段。
 	 */
 	function buildTrackListText(release: Readonly<Release>): string {
 		const multiDisc = release.tracks.length > 1;
-		return release.tracks
-			.flatMap((disc, i) => {
-				const lines = disc.map((tr, j) => {
-					const duration = tr.duration ? ` ${secondsToMMSS(tr.duration)}` : '';
-					return `${String(j + 1).padStart(2, '0')} ${tr.title}${duration}`;
-				});
-				return multiDisc ? [`DISC ${i + 1}`, ...lines] : lines;
-			})
-			.join('\n');
+		const blocks = release.tracks.map((disc, i) => {
+			const lines = disc.map((tr, j) => {
+				const duration = tr.duration ? ` ${secondsToMMSS(tr.duration)}` : '';
+				return `${String(j + 1).padStart(2, '0')} ${tr.title}${duration}`;
+			});
+			return (multiDisc ? [`DISC ${i + 1}`, ...lines] : lines).join('\n');
+		});
+		return blocks.join(multiDisc ? '\n\n' : '\n');
 	}
 	// `includeCover` 只有「极速打包带走」会传 true：普通打包与二连击是给已有条目
 	// 编辑用的，不需要几 MB 的封面 base64 挤进剪贴板。

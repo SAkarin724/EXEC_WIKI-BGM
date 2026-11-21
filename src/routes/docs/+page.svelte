@@ -290,7 +290,7 @@ Compose／Jeet Singh<span class="text-bgm-pink">(Tr.1-4,8)</span>, Salita<span c
 						<td><kbd>{altOrOpt}</kbd> + <kbd>shift</kbd></td>
 						<td>
 							导出曲目列表（<code>DISC N</code> 与 <code>01 曲名 mm:ss</code>，多碟每碟前写 DISC
-							N，单碟省略 DISC 行）
+							N、碟与碟之间空一行，单碟省略 DISC 行）
 						</td>
 					</tr>
 				</tbody>

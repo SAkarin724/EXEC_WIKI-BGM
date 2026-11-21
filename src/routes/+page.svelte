@@ -36,7 +36,7 @@
 		fromFormalRelease
 	} from './trackInfoWriter.ts';
 	import { localStorage$state } from './utils.svelte.ts';
-	import { secondsToHMS, buildDurationValue } from '$lib/importSource/common';
+	import { buildDurationValue } from '$lib/importSource/common';
 
 	const associableFields = new Set(Object.values(Role).slice(1));
 	const reactiveFields = new Set([...associableFields, '碟片数量']);
@@ -92,19 +92,33 @@
 			toast(`<b>嗯……？</b><br/>${getRandomTip()}`, { duration: 8000 });
 		}, 400);
 	}
+	/** 曲目表里的时长一律写成 `mm:ss`；超过 60 分钟时分钟数继续累加（如 `75:30`）。 */
+	function secondsToMMSS(seconds: number): string {
+		const total = Math.max(0, Math.round(seconds));
+		const m = Math.floor(total / 60);
+		const s = total % 60;
+		return [m, s].map((v) => String(v).padStart(2, '0')).join(':');
+	}
+	/**
+	 * 曲目表管道文本：光盘|曲目|原文标题|简体中文标题|时长。
+	 * 不输出表头行：曲目表识别会把含 `|` 的每一行都当数据解析。
+	 */
+	function buildTrackTable(release: Readonly<Release>): string {
+		return release.tracks
+			.flatMap((disc, i) =>
+				disc.map(
+					(tr, j) =>
+						`${i + 1}|${j + 1}|${tr.title}|${tr.comment}|${tr.duration ? secondsToMMSS(tr.duration) : ''}`
+				)
+			)
+			.join('\n');
+	}
 	// `includeCover` 只有「极速打包带走」会传 true：普通打包与二连击是给已有条目
 	// 编辑用的，不需要几 MB 的封面 base64 挤进剪贴板。
 	function marshal(includeCover = true) {
 		infoBox.storeRecentCombo(metaTagsState.val, metaTagsRecentCombosState);
 		const trackList = currentRelease.tracks.map((disc) => disc.map((tr) => tr.title).join('\n'));
-		const trackTable = currentRelease.tracks
-			.flatMap((disc, i) =>
-				disc.map(
-					(tr, j) =>
-						`${i + 1}|${j + 1}|${tr.title}|${tr.comment}|${tr.duration ? secondsToHMS(tr.duration) : ''}`
-				)
-			)
-			.join('\n');
+		const trackTable = buildTrackTable(currentRelease);
 		const relaTable = currentRelease
 			.intoCreatorSummary(name2staff)
 			.map(([bid, rt]) => {
@@ -170,15 +184,29 @@
 		}
 	}
 	// Copy a selective (or full, with Shift) patch generated from the current
-	// Release, ported from the "Staff Tag Fix" userscript.
+	// Release, ported from the "Staff Tag Fix" userscript. With Alt held, copy
+	// the track table instead.
 	async function copyPatch() {
-		const { patchText } = buildSelectivePatch(currentRelease, name2staff, useShiftOnCopy);
+		// Snapshot the modifier intent before the awaited clipboard write: the
+		// user may release Alt/Shift while the write is still in flight.
+		if (useAltOnCopy) {
+			const trackTable = buildTrackTable(currentRelease);
+			if (!trackTable) {
+				toast('当前没有可复制的曲目', { alert: true });
+				return;
+			}
+			await navigator.clipboard.writeText(trackTable);
+			toast('已复制曲目表到剪贴板');
+			return;
+		}
+		const useFullPatch = useShiftOnCopy;
+		const { patchText } = buildSelectivePatch(currentRelease, name2staff, useFullPatch);
 		if (!patchText) {
 			toast('当前没有符合条件的 Patch', { alert: true });
 			return;
 		}
 		await navigator.clipboard.writeText(patchText);
-		toast(useShiftOnCopy ? '已复制全部 Patch' : '已复制 Patch 到剪贴板');
+		toast(useFullPatch ? '已复制全部 Patch' : '已复制 Patch 到剪贴板');
 	}
 	function setState(
 		s: ContentState = {
@@ -313,6 +341,9 @@
 	// Like the pack button, Shift only takes effect once the mouse is over
 	// the "复制 Patch" button (hover), not from the bare key press alone.
 	let useShiftOnCopy = $derived(hoverCopyPatchBtn && shiftMode);
+	// Alt + hover switches the same button to copying the track table.
+	// Alt wins when both modifiers are held, since it is a distinct payload.
+	let useAltOnCopy = $derived(hoverCopyPatchBtn && optMode);
 
 	// Re-derive the modifier state from a live event instead of toggling it on
 	// individual keyup/keydown. A swallowed keyup (Alt+Tab, IME input-mode
@@ -433,9 +464,13 @@
 			}}
 			onmousemove={syncModifiers}
 			onmouseleave={() => (hoverCopyPatchBtn = false)}
-			title={useShiftOnCopy ? '复制全部 Patch 到剪贴板' : '只复制符合条件的 Patch 到剪贴板'}
+			title={useAltOnCopy
+				? '复制曲目表（光盘|曲目|原文标题|简体中文标题|时长）到剪贴板'
+				: useShiftOnCopy
+					? '复制全部 Patch 到剪贴板'
+					: '只复制符合条件的 Patch 到剪贴板'}
 		>
-			{useShiftOnCopy ? '复制全部 Patch' : '复制 Patch'}
+			{useAltOnCopy ? '复制曲目表' : useShiftOnCopy ? '复制全部 Patch' : '复制 Patch'}
 		</Button>
 		<Cover bind:value={coverState} />
 		<Button

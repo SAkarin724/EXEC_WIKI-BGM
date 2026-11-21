@@ -1,0 +1,93 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link [ref=e5] [cursor=pointer]:
+        - /url: /
+        - heading "EXEC_WIKI=BGM/." [level=1] [ref=e6]
+      - heading "EXEC_WIKI=BGM/." [level=1] [ref=e7]
+      - paragraph [ref=e8]: 维基音乐条目可视化编辑套件
+  - main [ref=e10]:
+    - generic [ref=e11]:
+      - button "长按再来一张" [ref=e12] [cursor=pointer]
+      - button "导入…" [ref=e13] [cursor=pointer]
+      - button "曲目表识别" [ref=e14] [cursor=pointer]
+      - button "复制 Patch" [ref=e16] [cursor=pointer]
+      - button [ref=e18] [cursor=pointer]
+      - button "打包带走！" [ref=e23] [cursor=pointer]
+    - generic [ref=e24]:
+      - textbox [ref=e32]:
+        - generic [ref=e33]:
+          - generic [aria-hidden]: 物凄い勢いでけーねが物凄いうた 編曲：sumijun 作詞：いずみん
+      - generic [ref=e34]:
+        - textbox "唱片名" [ref=e36]
+        - generic [ref=e37]:
+          - button "切换源码/表格模式" [ref=e38] [cursor=pointer]:
+            - img [ref=e39]:
+              - generic [ref=e40]: "{}"
+          - generic [ref=e41]:
+            - button "点击编辑标签" [ref=e43] [cursor=pointer]:
+              - generic [ref=e44]: 添加标签
+            - generic [ref=e45]: ↵ 新项 ←↑↓→穿梭 Alt↑↓排序
+            - generic [ref=e47]:
+              - textbox [ref=e48]
+              - textbox [ref=e49]
+            - generic [ref=e51]:
+              - textbox [ref=e52]
+              - generic [ref=e54]:
+                - text: (空列表)
+                - button "开始编辑列表" [ref=e55] [cursor=pointer]
+            - generic [ref=e59]:
+              - textbox [ref=e60]
+              - textbox [ref=e61]
+            - generic [ref=e63]:
+              - textbox [ref=e64]
+              - textbox [ref=e65]
+            - generic [ref=e67]:
+              - textbox [ref=e68]
+              - textbox [ref=e69]
+            - generic [ref=e71]:
+              - textbox [ref=e72]
+              - textbox [ref=e73]
+            - generic [ref=e75]:
+              - textbox [ref=e76]
+              - textbox [ref=e77]
+            - generic [ref=e79]:
+              - textbox [ref=e80]
+              - textbox [ref=e81]
+            - generic [ref=e83]:
+              - textbox [ref=e84]
+              - textbox [ref=e85]
+            - generic [ref=e87]:
+              - textbox [ref=e88]
+              - textbox [ref=e89]:
+                - textbox [ref=e90]
+            - generic [ref=e92]:
+              - textbox [ref=e93]
+              - textbox [ref=e94]
+            - generic [ref=e96]:
+              - textbox [ref=e97]
+              - textbox [ref=e98]
+            - generic [ref=e100]:
+              - textbox [ref=e101]
+              - textbox [ref=e102]
+        - textbox "简介" [ref=e103]
+      - generic [ref=e104]: 空
+    - generic [ref=e112]:
+      - link [ref=e113] [cursor=pointer]:
+        - /url: /docs
+        - button "指南" [ref=e114]
+      - button "关联数据库" [ref=e119] [cursor=pointer]
+      - button "设置" [ref=e120] [cursor=pointer]
+    - button "（一周目）你好……你是？ （N 周目）啊↘，你不记得我了吗？呜呜呜……重载，引导记忆注入 我就一路过的，你这个是什么？ ？？？ （澄澈而中立的微笑）你好，维基人…… ▼︎ > >‖ save load" [active] [ref=e123]:
+      - generic [ref=e124]:
+        - generic [ref=e126]:
+          - button "（一周目）你好……你是？" [ref=e127] [cursor=pointer]
+          - button "（N 周目）啊↘，你不记得我了吗？呜呜呜……重载，引导记忆注入" [ref=e128] [cursor=pointer]
+          - button "我就一路过的，你这个是什么？" [ref=e129] [cursor=pointer]
+        - generic [ref=e134]:
+          - text: ？？？
+          - generic [ref=e136]:
+            - text: （澄澈而中立的微笑）你好，维基人……
+            - generic [ref=e137]: ▼︎
+          - generic "3分钟的剧情，求不要c" [ref=e138]: "> >‖ save load"
+          - button [ref=e139] [cursor=pointer]

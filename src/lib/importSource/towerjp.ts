@@ -1,6 +1,6 @@
 import type { ImportSource, AutoEditor, Disc, Credits } from "./common";
 import { CORS_ENDPOINT } from "../client";
-import { durationToSeconds, buildDurationValue } from "./common";
+import { durationToSeconds, applyDurationField } from "./common";
 
 const RE_DATE = /(\d{4})\D+(\d+)\D+(\d+)/u;
 const ROLE_WHITELIST = new Set(["歌", "作詞", "作曲", "編曲"]);
@@ -56,7 +56,7 @@ export class TowerJp implements ImportSource {
                 derived ??
                 durationToSeconds(info.duration) ??
                 info.discSeconds.reduce<number>((a, s) => a + (s ?? 0), 0);
-            editor.setInfoBoxField("播放时长", buildDurationValue(info.discSeconds, totalSeconds));
+            applyDurationField(editor, info.discSeconds, totalSeconds);
         }
 
         if (opts.trackListCredits) {
@@ -144,6 +144,7 @@ function parseDiscInfo(contentInfo: Element): { discs: Disc[]; discSeconds: (num
             );
             if (sec === null) missing = true;
             else sum += sec;
+            const duration = sec ?? undefined;
 
             const creditEls = Array.from(track.querySelectorAll("div.TOL-item-info-PC-tab-recorded-contents-list-track-hidden-contents-area > div"));
             const credits = Object.fromEntries(creditEls.flatMap((credit) => {
@@ -152,7 +153,7 @@ function parseDiscInfo(contentInfo: Element): { discs: Disc[]; discSeconds: (num
                 const names = spans.slice(1).map(span => span.textContent?.trim()).filter((n): n is string => !!n);
                 return role && names.length > 0 && ROLE_WHITELIST.has(role) ? [[role, names]] : [];
             }));
-            return { title, comment: "", credits };
+            return { title, comment: "", ...(duration ? { duration } : {}), credits };
         });
 
         // 有一曲缺时长 -> 该碟不认（整体退回单级，不输出残值）

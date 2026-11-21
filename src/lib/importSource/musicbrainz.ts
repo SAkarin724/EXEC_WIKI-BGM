@@ -1,5 +1,5 @@
 import type { ImportSource, AutoEditor, SearchResultEntry } from "./common";
-import { DefaultDict, warningTemplate3rdPartyWiki, buildDurationValue } from "./common";
+import { DefaultDict, warningTemplate3rdPartyWiki, applyDurationField } from "./common";
 
 export class MusicBrainz implements ImportSource {
     name = "MusicBrainz";
@@ -106,7 +106,7 @@ export class MusicBrainz implements ImportSource {
             );
             const totalSeconds =
                 media.flatMap(({ tracks }) => tracks.map(({ length }) => length ?? 0)).reduce((a, b) => a + b, 0) / 1000;
-            editor.setInfoBoxField("播放时长", buildDurationValue(discSeconds, totalSeconds));
+            applyDurationField(editor, discSeconds, totalSeconds);
         }
 
         if (opts.releaseDate) {

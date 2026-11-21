@@ -1,4 +1,5 @@
 import { TreeSitterParser, type NodeInfo } from "./treeSitterParser";
+import { durationToSeconds } from "$lib/importSource/common";
 
 import { Parser, Language as TreeSitterLanguage } from "web-tree-sitter";
 import { LanguageSupport, Language, defineLanguageFacet, languageDataProp } from "@codemirror/language";
@@ -167,6 +168,7 @@ const FIELD2NODETYPE: { [name: string]: lezer.NodeType } = {
     "《": NODE_TYPES.keyword,
     "》": NODE_TYPES.keyword,
     "title": NODE_TYPES.heading,
+    "duration": NODE_TYPES.annotation,
     "//": NODE_TYPES.comment,
     "comment": NODE_TYPES.comment,
     "DISC": NODE_TYPES.keyword,
@@ -180,6 +182,7 @@ const SEMANTIC_TYPES = [
     "cv_conj",
     "parts",
     "title",
+    "duration",
     "comment",
     // 书名号：语法层始终成对出现（`《` + creator + `》`），中间整段是一个整体名字。
     // 不带下来就无从判断一个名字是「被括起来、不许拆」还是普通的连接词写法。
@@ -196,6 +199,8 @@ export interface CreditField {
 export class RawTrack {
     title: string = "";
     comment: string = "";
+    /** 曲目时长（秒）；null = 没有写 */
+    duration: number | null = null;
     credits: CreditField[] = [];
     line: number = 0;
 }
@@ -250,10 +255,25 @@ function intoRawTrack(node: NodeInfo): RawTrack {
             track.title = child.text;
         } else if (child.type === "comment" && !track.comment) {
             track.comment = child.text.trim();
+        } else if (child.type === "duration") {
+            // duration 节点会带上标题后的空格：` (01:38)`，先 trim 再剥括号。
+            const sec = durationToSeconds(child.text.trim().replace(/^[(（]|[)）]$/g, '').trim());
+            if (sec !== null) track.duration = sec;
         } else if (child.type === "credit_block") {
             track.credits.push(...intoCredits(child.children));
         } else if (child.type !== "《" && child.type !== "》") {
             rest.push(child);
+        }
+    }
+    // 书名号标题（《曲目 (01:38)》）里的时长会被并进 title；这里兜底拆出。
+    if (track.title && track.duration === null) {
+        const m = track.title.match(/^(.*?)\s*\((\d{1,3}:\d{2}(?::\d{2})?)\)\s*$/);
+        if (m) {
+            const sec = durationToSeconds(m[2]);
+            if (sec !== null) {
+                track.title = m[1].trim();
+                track.duration = sec;
+            }
         }
     }
     if (!track.title) {

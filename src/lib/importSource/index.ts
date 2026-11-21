@@ -7,3 +7,5 @@ export type {
     Credits,
     SearchResultEntry
 }
+
+export { parseTrackList, type TrackListParseOptions } from './tracklist';

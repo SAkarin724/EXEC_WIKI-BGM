@@ -19,6 +19,7 @@
 	import Toast, { toast } from './Toast.svelte';
 	import Scenario from '$lib/vn/Scenario.svelte';
 	import ImportDialog from './ImportDialog.svelte';
+	import TrackListPaste from './TrackListPaste.svelte';
 	import SubmitDialog from './SubmitDialog.svelte';
 	import ConfirmationDialog from '$lib/ConfirmationDialog.svelte';
 	import Title from './Title.svelte';
@@ -35,6 +36,7 @@
 		fromFormalRelease
 	} from './trackInfoWriter.ts';
 	import { localStorage$state } from './utils.svelte.ts';
+	import { secondsToHMS, buildDurationValue } from '$lib/importSource/common';
 
 	const associableFields = new Set(Object.values(Role).slice(1));
 	const reactiveFields = new Set([...associableFields, '碟片数量']);
@@ -96,7 +98,12 @@
 		infoBox.storeRecentCombo(metaTagsState.val, metaTagsRecentCombosState);
 		const trackList = currentRelease.tracks.map((disc) => disc.map((tr) => tr.title).join('\n'));
 		const trackTable = currentRelease.tracks
-			.flatMap((disc, i) => disc.map((tr, j) => `${i + 1}|${j + 1}|${tr.title}|${tr.comment}|`))
+			.flatMap((disc, i) =>
+				disc.map(
+					(tr, j) =>
+						`${i + 1}|${j + 1}|${tr.title}|${tr.comment}|${tr.duration ? secondsToHMS(tr.duration) : ''}`
+				)
+			)
 			.join('\n');
 		const relaTable = currentRelease
 			.intoCreatorSummary(name2staff)
@@ -226,6 +233,32 @@
 			infoBox.edit(summary, reactiveFields, previousCustomRows);
 			syncedCustomRows = customNames;
 		});
+	});
+	let lastDurationSignature = '';
+	$effect(() => {
+		// 曲目时长变化时同步 Infobox 的播放时长：逐碟判断，只写时长齐备的碟。
+		const discs = currentRelease.tracks.map((disc) => disc.map((tr) => tr.duration ?? null));
+		if (!discs.length) {
+			lastDurationSignature = '';
+			return;
+		}
+		const discSeconds = discs.map((d) =>
+			d.length && d.every((s) => typeof s === 'number' && s > 0)
+				? d.reduce<number>((a, s) => a + (s ?? 0), 0)
+				: null
+		);
+		const total = discSeconds.reduce<number>((a, s) => a + (s ?? 0), 0);
+		const value = buildDurationValue(discSeconds, total);
+		if (value === null) {
+			lastDurationSignature = '';
+			return;
+		}
+		// 以最终写入值做签名短路，避免重复写 $state
+		const signature = JSON.stringify(value);
+		if (signature === lastDurationSignature) return;
+		lastDurationSignature = signature;
+
+		infoBox.editField('播放时长', value);
 	});
 
 	let settingsState = localStorage$state('settings', defaultSettings);
@@ -389,6 +422,7 @@
 	<div class="flex flex-justify-between gap-5">
 		<LongpressButton class="w-33 text-lg" onclick={clear}>长按<wbr />再来一张</LongpressButton>
 		<Button class="w-20 text-lg" onclick={async () => (showImportDialog = true)}>导入…</Button>
+		<TrackListPaste {editor} {currentRelease} />
 		<div class="flex-grow-1 h-[1rem] mx-3 p-2"></div>
 		<Button
 			class="w-31 text-lg"

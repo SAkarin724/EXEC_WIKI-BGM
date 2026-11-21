@@ -4,6 +4,7 @@
 	import { resolveArtistUnits, resolvePlainStarring, shouldJoinStarring } from './artistJoiner';
 	import { splitCircleCredit } from './circleCredit';
 	import { orderedEntries } from '$lib/bangumiUtils';
+	import { secondsToTrackDuration } from '$lib/importSource/common';
 
 	interface PreviewProps {
 		release: Readonly<Release>;
@@ -186,23 +187,30 @@
 			</div>
 			{#each disc as track, j}
 				<div class={'py-2 px-1 ' + (j % 2 !== 0 ? 'bg-bgm-lightgrey' : '')}>
-					<div class="font-size-sm break-words hyphens-auto">
-						{j + 1}
-						<span
-							role="button"
-							tabindex="0"
-							class="cursor-pointer hover:text-bgm-teal"
-							title="点击定位到输入框"
-							onclick={() => onTrackClick?.(i, j)}
-							onkeydown={(e) => {
-								if (e.key === 'Enter' || e.key === ' ') {
-									e.preventDefault();
-									onTrackClick?.(i, j);
-								}
-							}}
-						>{track.title}</span>
-						{#if track.comment}
-							<span class="font-size-xs color-bgm-darkgrey">/ {track.comment}</span>
+					<div class="font-size-sm break-words hyphens-auto flex items-baseline justify-between gap-2">
+						<div class="min-w-0">
+							{j + 1}
+							<span
+								role="button"
+								tabindex="0"
+								class="cursor-pointer hover:text-bgm-teal"
+								title="点击定位到输入框"
+								onclick={() => onTrackClick?.(i, j)}
+								onkeydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										onTrackClick?.(i, j);
+									}
+								}}
+							>{track.title}</span>
+							{#if track.comment}
+								<span class="font-size-xs color-bgm-darkgrey">/ {track.comment}</span>
+							{/if}
+						</div>
+						{#if track.duration}
+							<span class="font-size-xs color-bgm-darkgrey shrink-0 tabular-nums">
+								{secondsToTrackDuration(track.duration)}
+							</span>
 						{/if}
 					</div>
 					{@render formattedCredits(creditMerged[i][j])}

@@ -1,4 +1,5 @@
 import { type Release, type Credits } from "$lib/importSource";
+import { type Track, secondsToTrackDuration } from "$lib/importSource/common";
 import { RE_ROLE_KEYWORD, pagenoJoin, multiDiscPageNoJoin, Role, stripRedundantAlias, Release as FormalRelease } from "./postprocess";
 import { hasArtistJoinerSyntax, isComposedName, matchCreatorUnits, resolvePlainStarring, shouldJoinStarring, splitArtistUnits } from "./artistJoiner";
 import { isQuotedCreatorName } from "./nameQuoting";
@@ -11,6 +12,17 @@ const RE_SEP = /[ 　\t&＆:：\/・、；,]/;
 const RE_LATIN_SPACE = /[A-Za-z] [A-Za-z]/;
 
 export { type Release };
+
+/** 曲目行：标题 + 可选时长 + 可选 `// 注释`，标题含职位关键词时整体加书名号 */
+function formatTrackTitle(tr: Track, index: number, count: number): string {
+    let t = count > 1 ? `${String(index + 1).padStart(2, '0')} ${tr.title}` : tr.title;
+    if (typeof tr.duration === 'number' && tr.duration > 0) {
+        t += ` (${secondsToTrackDuration(tr.duration)})`;
+    }
+    t = RE_ROLE_KEYWORD.test(t) ? `《${t}》` : t;
+    if (tr.comment) t += ` // ${tr.comment}`;
+    return t;
+}
 
 export function writeTrackInfo(info: Release, style: 'parts' | 'tracks' | 'import' | 'default' = 'default'): string {
     switch (style) {
@@ -38,9 +50,7 @@ function writeTrackInfoCreditTracks(info: Release): string {
     trackInfo += info.discs.map((disc) => {
         let s = isMulti ? "\nDISC\n" : "";
         s += disc.tracks.map((tr, i) => {
-            let t = disc.tracks.length > 1 ? `${String(i + 1).padStart(2, '0')} ${tr.title}` : tr.title;
-            t = RE_ROLE_KEYWORD.test(t) ? `《${t}》` : t;
-            if (tr.comment) t += ` // ${tr.comment}`;
+            let t = formatTrackTitle(tr, i, disc.tracks.length);
             t += '\n';
             if (Object.keys(tr.credits).length > 0) {
                 t += formatCredits(tr.credits);
@@ -64,9 +74,7 @@ function writeTrackInfoCreditImport(info: Release): string {
     trackInfo += info.discs.map((disc) => {
         let s = isMulti ? "\nDISC\n" : "";
         s += disc.tracks.map((tr, i) => {
-            let t = disc.tracks.length > 1 ? `${String(i + 1).padStart(2, '0')} ${tr.title}` : tr.title;
-            t = RE_ROLE_KEYWORD.test(t) ? `《${t}》` : t;
-            if (tr.comment) t += ` // ${tr.comment}`;
+            let t = formatTrackTitle(tr, i, disc.tracks.length);
             t += '\n';
             if (Object.keys(tr.credits).length > 0) {
                 t += formatCreditsInputOrder(tr.credits);
@@ -111,9 +119,7 @@ function writeTrackInfoCreditParts(info: Release): string {
     trackInfo += info.discs.map((disc) => {
         let s = isMulti ? "\nDISC\n" : "";
         s += disc.tracks.map((tr, i) => {
-            let t = disc.tracks.length > 1 ? `${String(i + 1).padStart(2, '0')} ${tr.title}` : tr.title;
-            t = RE_ROLE_KEYWORD.test(t) ? `《${t}》` : t;
-            if (tr.comment) t += ` // ${tr.comment}`;
+            let t = formatTrackTitle(tr, i, disc.tracks.length);
             t += '\n';
             return t;
         }).join('\n');
@@ -126,7 +132,7 @@ export function fromFormalRelease(rf: Readonly<FormalRelease>, name2staff?: Reso
     const r: Release = {
         credits: {},
         discs: rf.tracks.map((d) => ({
-            tracks: d.map((t) => ({ title: t.title, comment: t.comment, credits: {} }))
+            tracks: d.map((t) => ({ title: t.title, comment: t.comment, duration: t.duration, credits: {} }))
         }))
     }
     let pushCredit: (credit: Credits, role: string, name: string) => void;

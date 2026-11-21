@@ -255,6 +255,8 @@ interface CreditsText { [roleID: string]: string[]; } // { roleID: [name, ...] }
 export interface Track {
     title: string;
     comment: string;
+    /** 曲目时长（秒）；undefined = 没有写 */
+    duration?: number;
     line: number;
 }
 
@@ -363,6 +365,7 @@ export class Release {
 				}
 				ct.title = trackTitles[j];
 				ct.comment = track.comment;
+				ct.duration = track.duration;
 				ct.credits.push(...track.credits);
 				if (ct.title) {
 			compactTracks.push(ct = new RawTrack());
@@ -406,8 +409,9 @@ export class Release {
 				return {
 					title: rt.title,
 			comment: rt.comment,
+			duration: rt.duration ?? undefined,
 			line: rt.line,
-			}
+				}
 			});
 		});
 

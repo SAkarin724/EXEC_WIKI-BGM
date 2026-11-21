@@ -44,6 +44,8 @@ export interface Disc {
 export interface Track {
     title: string;
     comment: string;
+    /** 曲目时长（秒）；undefined = 没有写 */
+    duration?: number;
     credits: Credits;
 }
 
@@ -91,6 +93,16 @@ export function formatDuration(seconds: number): string {
     return secondsToHMS(seconds);
 }
 
+/** 秒 -> 曲目行用的 `mm:ss`（不足 1 小时）或 `hh:mm:ss` */
+export function secondsToTrackDuration(seconds: number): string {
+    const total = Math.max(0, Math.round(seconds));
+    if (total >= 3600) return secondsToHMS(total);
+
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return [m, s].map((v) => String(v).padStart(2, '0')).join(':');
+}
+
 /**
  * `mm:ss` / `h:mm:ss` -> 秒；认不出来返回 null。
  * （纯秒数不认，属不规范写法。）
@@ -120,21 +132,52 @@ export function normalizeDuration(value: string): string | null {
 }
 
 /**
- * 构造「播放时长」字段的值（导入侧用）：
- *   分碟时长齐备且多于 1 碟 -> 多级形态 `[["", 总时长], ["DISC 1", 碟1], ...]`
- *     （序列化后即 `{ [总时长] [DISC 1|x] [DISC 2|y] }`）
- *   否则 -> 单级形态 `hh:mm:ss`
+ * 逐碟时长（秒）：某碟非空且每首都有正时长才给出数字，否则 null。
+ * 用于「播放时长」字段，允许只补了部分碟的曲目表。
+ */
+export function discSecondsOf(discs: Disc[]): (number | null)[] {
+    return discs.map((disc) => {
+        const { tracks } = disc;
+        if (!tracks.length) return null;
+        if (!tracks.every((t) => typeof t.duration === 'number' && t.duration > 0)) return null;
+        return tracks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
+    });
+}
+
+/**
+ * 构造「播放时长」字段的值：
+ *   单碟有效 -> 单行 `hh:mm:ss`（等效 `{ [hh:mm:ss] }`）
+ *   多碟 -> `[["DISC 1", "hh:mm:ss"], ...]`，只列出时长齐备的碟，不写总时长行
+ *   无可用数据 -> null（调用方不应写入该字段）
  * @param discSeconds 每碟秒数；null/非正数 = 该碟时长未知
- * @param totalSeconds 总时长（秒），分碟不可用时直接用它
+ * @param totalSeconds 外部给出的总时长（如第三方站的合计收录时间），仅在无可用的碟时回退
  */
 export function buildDurationValue(
     discSeconds: (number | null)[],
-    totalSeconds: number
-): string | [string, string][] {
-    const complete = discSeconds.length > 1 && discSeconds.every((s): s is number => typeof s === 'number' && s > 0);
-    if (!complete) return secondsToHMS(totalSeconds);
+    totalSeconds = 0
+): string | [string, string][] | null {
+    const known = discSeconds.filter((s): s is number => typeof s === 'number' && s > 0);
 
-    const discs: [string, string][] = discSeconds.map((s, i) => [`DISC ${i + 1}`, secondsToHMS(s ?? 0)]);
+    if (discSeconds.length > 1) {
+        if (!known.length) return totalSeconds > 0 ? secondsToHMS(totalSeconds) : null;
+        return discSeconds
+            .map((s, i): [string, string] | null =>
+                typeof s === 'number' && s > 0 ? [`DISC ${i + 1}`, secondsToHMS(s)] : null
+            )
+            .filter((item): item is [string, string] => item !== null);
+    }
 
-    return [["", secondsToHMS(totalSeconds)], ...discs];
+    const single = known[0] ?? totalSeconds;
+    return single > 0 ? secondsToHMS(single) : null;
+}
+
+/** 把逐碟时长写进 Infobox 的「播放时长」；没有可用数据时保持原样。 */
+export function applyDurationField(
+    editor: AutoEditor,
+    discSeconds: (number | null)[],
+    totalSeconds = 0
+): boolean {
+    const value = buildDurationValue(discSeconds, totalSeconds);
+    if (value === null) return false;
+    return editor.setInfoBoxField('播放时长', value);
 }

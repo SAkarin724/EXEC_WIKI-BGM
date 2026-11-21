@@ -5590,12 +5590,14 @@ html[data-theme="dark"] .bgm-staff-home-pr-item-meta {
         return `${disc === "0" ? "1" : disc}|${track}`;
     }
 
-    /** 曲目表里「第 4 列（注释 / 外文标题）非空」的键：一键填注释主要针对这些曲目 */
+    /** 曲目表里「第 4 列（注释 / 外文标题）或第 5 列（时长）非空」的键 */
     function trackTableCommentedKeys(trackTable) {
         const keys = new Set();
         for (const line of splitEpListLines(trackTable)) {
             const parts = String(line).split("|");
-            if (!String(parts[3] ?? "").trim()) continue;
+            const hasComment = Boolean(String(parts[3] ?? "").trim());
+            const hasDuration = Boolean(String(parts[4] ?? "").trim());
+            if (!hasComment && !hasDuration) continue;
 
             const key = trackTableKeyOf(line);
             if (key) keys.add(key);
@@ -5871,7 +5873,7 @@ html[data-theme="dark"] .bgm-staff-home-pr-item-meta {
             return;
         }
 
-        // 靶向：只挑「曲目表里有注释」的那些章节（整张专辑不是每首都有注释时，
+        // 靶向：只挑「曲目表里有注释 / 时长」的那些章节（整张专辑不是每首都有内容时，
         // 没必要把全表都提交一遍）。认不出行号就退回全选兜底，绝不猜。
         const commented = trackTableCommentedKeys(trackTable);
         const rows = collectEpRowKeys();
@@ -5900,7 +5902,7 @@ html[data-theme="dark"] .bgm-staff-home-pr-item-meta {
 
         showMsgSafe(
             targeted
-                ? `曲目表里 ${commented.size} 首带注释，只处理其中的 ${targetIds.length} 个章节。`
+                ? `曲目表里 ${commented.size} 首带注释或时长，只处理其中的 ${targetIds.length} 个章节。`
                 : `没有可靶向的部分，按全部 ${targetIds.length} 个章节处理。`
         );
 

@@ -3,6 +3,7 @@ const BGMAPI_ENDPOINT = 'https://api.bgm.tv';
 export const WRITE_GATEWAY_ENDPOINT = 'https://exec-wiki-bgm-write-gateway.hya.moe';
 
 import { type Staff } from './db';
+import { durationToSeconds } from './importSource/common';
 
 export interface SubjectInfo {
     name: string;
@@ -16,6 +17,10 @@ export interface SubjectEpInfo {
     name_cn: string;
     disc: number;
     ep: number;
+    /** 每曲时长；BGM API 可能返回 `hh:mm:ss` 字符串或秒数 */
+    duration?: number | string;
+    /** BGM API 的秒数列（优先于 duration 字符串） */
+    duration_seconds?: number;
 }
 export interface SubjectRelaPerson {
     id: number;
@@ -138,6 +143,14 @@ export async function getSubjectEpInfo(sid: number): Promise<SubjectEpInfo[]> {
     (result.data as SubjectEpInfo[]).forEach((ep) => {
         ep.name = entityUnescape(ep.name);
         ep.name_cn = entityUnescape(ep.name_cn);
+        if (typeof ep.duration_seconds === 'number' && ep.duration_seconds > 0) {
+            ep.duration = ep.duration_seconds;
+        } else if (typeof ep.duration === 'string') {
+            const text = ep.duration.trim();
+            const sec = durationToSeconds(text);
+            if (sec !== null) ep.duration = sec;
+            else if (/^\d+$/.test(text)) ep.duration = parseInt(text, 10);
+        }
     }); // workaround for the HTML entities bug
     return result.data as SubjectEpInfo[];
 }

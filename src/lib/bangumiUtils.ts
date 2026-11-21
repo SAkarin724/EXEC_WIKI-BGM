@@ -1,4 +1,4 @@
-import { type Release, type Track, DefaultDict } from "./importSource/common";
+import { type Release, type Track, DefaultDict, durationToSeconds } from "./importSource/common";
 import { type SubjectEpInfo, type SubjectRelaPerson } from "./client";
 
 /// Assemble Bangumi API data into a Release
@@ -19,9 +19,17 @@ export function assembleRelease(subjectEpInfo: SubjectEpInfo[], subjectRelaPerso
     const discs = DefaultDict(() => ({} as Record<number, Track>));
     subjectEpInfo.forEach((tr) => {
         const d = tr.disc === 0 ? 1 : tr.disc;
+        const rawDuration = tr.duration ?? tr.duration_seconds;
+        const durationText = String(rawDuration ?? '').trim();
+        const duration = typeof rawDuration === 'number'
+            ? rawDuration
+            : /^\d+$/.test(durationText)
+                ? parseInt(durationText, 10)
+                : durationToSeconds(durationText);
         discs[d][tr.ep] = {
             title: tr.name,
             comment: tr.name_cn,
+            ...(duration !== null && duration > 0 ? { duration } : {}),
             credits: relaMap[d][tr.ep],
         };
     });

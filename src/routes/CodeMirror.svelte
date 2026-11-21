@@ -52,7 +52,8 @@
 	type CodeMirrorProps = {
 		value?: string;
 		class?: string;
-		lang: LanguageSupport;
+		/** 缺省则为纯文本编辑器 */
+		lang?: LanguageSupport;
 		theme?: Extension;
 		styles?: ThemeSpec;
 		highlightStyle?: HighlightStyle;
@@ -216,7 +217,7 @@
 		placeholder: string | HTMLElement | undefined,
 		editable: boolean,
 		readonly: boolean,
-		lang: LanguageSupport
+		lang: LanguageSupport | undefined
 	): Extension[] {
 		const extensions: Extension[] = [
 			highlightActiveLineGutter(),

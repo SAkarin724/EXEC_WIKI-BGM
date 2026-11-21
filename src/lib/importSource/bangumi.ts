@@ -1,5 +1,5 @@
 import type { ImportSource, AutoEditor } from "./common";
-import { DefaultDict } from "./common";
+import { DefaultDict, discSecondsOf, applyDurationField } from "./common";
 import { getSubjectInfo, getSubjectEpInfo, getSubjectRelaPerson, type SubjectInfo, type SubjectRelaPerson } from "$lib/client";
 import { assembleRelease } from "$lib/bangumiUtils";
 import { fetchStaffPatch, applyStaffPatchToRelease } from "./staffPatch";
@@ -11,6 +11,7 @@ export class Bangumi implements ImportSource {
     options = [
         { id: "patch", text: "Patch补丁", default: true },
         { id: "trackListCredits", text: "曲目列表与制作人员", default: true },
+        { id: "length", text: "播放时长", default: true },
         { id: "importRela", text: "导入关联的人物", default: true },
         { id: "titleIntro", text: "标题与简介", default: true },
         { id: "infobox", text: "Infobox 与公共标签", default: true },
@@ -69,15 +70,17 @@ export class Bangumi implements ImportSource {
             // 优先采用 Patch 补丁（staff 修复仓库）提供的信息，而不是默认导入的信息。
             // 直接从每首曲目的结构化 trackCredits / epinfo 重建，不使用 rawPatches.editor。
             // 用 import 写法写出：每首曲目按 credits 原顺序单独成行，不被全专辑聚合重排。
+            let trackInfo = release;
             if (opts.patch) {
                 const patch = await fetchStaffPatch(this.sid);
-                if (patch) {
-                    editor.setTrackInfo(applyStaffPatchToRelease(patch, release), 'import');
-                } else {
-                    editor.setTrackInfo(release);
-                }
-            } else {
-                editor.setTrackInfo(release);
+                if (patch) trackInfo = applyStaffPatchToRelease(patch, release);
+            }
+            editor.setTrackInfo(trackInfo, 'import');
+
+            if (opts.length) {
+                const discSeconds = discSecondsOf(trackInfo.discs);
+                const total = discSeconds.reduce<number>((sum, s) => sum + (s ?? 0), 0);
+                applyDurationField(editor, discSeconds, total);
             }
         }
 

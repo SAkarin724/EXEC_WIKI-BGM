@@ -239,6 +239,7 @@ export function applyStaffPatchToRelease(
 		tracks: disc.tracks.map((track) => ({
 			title: track.title,
 			comment: track.comment,
+			duration: track.duration,
 			credits: {} as Credits,
 		})),
 	}));

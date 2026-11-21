@@ -1288,6 +1288,10 @@
         {
           "type": "credit_block",
           "named": true
+        },
+        {
+          "type": "duration",
+          "named": true
         }
       ]
     }
@@ -1952,6 +1956,10 @@
   {
     "type": "designer",
     "named": false
+  },
+  {
+    "type": "duration",
+    "named": true
   },
   {
     "type": "featured",

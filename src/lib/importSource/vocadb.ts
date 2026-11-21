@@ -1,7 +1,7 @@
 // See https://wiki.vocadb.net/docs/development/public-api
 // TouhouDB and UtaiteDB are using the same API.
 import type { ImportSource, AutoEditor, Disc } from "./common";
-import { DefaultDict, warningTemplate3rdPartyWiki, buildDurationValue } from "./common";
+import { DefaultDict, warningTemplate3rdPartyWiki, applyDurationField } from "./common";
 
 export class VocaDB implements ImportSource {
     name = "VocaDB / UtaiteDB / TouhouDB";
@@ -50,7 +50,13 @@ export class VocaDB implements ImportSource {
                 if (track.discNumber !== discs.length) {
                     discs.push({ tracks: [] });
                 }
-                discs[track.discNumber - 1].tracks.push({ title: track.name, comment: track.song.artistString, credits: {} });
+                const duration = track.song?.lengthSeconds;
+                discs[track.discNumber - 1].tracks.push({
+                    title: track.name,
+                    comment: track.song.artistString,
+                    ...(typeof duration === 'number' && duration > 0 ? { duration } : {}),
+                    credits: {}
+                });
             });
             editor.setTrackInfo({ credits: relaMap0, discs }, 'tracks');
         }
@@ -70,22 +76,21 @@ export class VocaDB implements ImportSource {
 
         if (opts.length) {
             const { tracks } = (await this.albumInfo)!;
-            // 按 discNumber 汇总；任一曲缺时长就认为该碟时长不可用
-            const byDisc = new Map<number, number>();
-            let complete = tracks.length > 0;
+            // 按 discNumber 逐碟汇总；某碟任一曲缺时长就认为该碟时长不可用（其余碟照常写入）
+            const maxDisc = tracks.reduce((max, t) => Math.max(max, t.discNumber), 0);
+            const sums: number[] = Array.from({ length: maxDisc }, () => 0);
+            const incomplete = new Set<number>();
             tracks.forEach((track) => {
                 const sec = track.song?.lengthSeconds;
                 if (typeof sec !== 'number' || sec <= 0) {
-                    complete = false;
+                    incomplete.add(track.discNumber);
                     return;
                 }
-                byDisc.set(track.discNumber, (byDisc.get(track.discNumber) ?? 0) + sec);
+                sums[track.discNumber - 1] += sec;
             });
+            const discSeconds = sums.map((s, i) => (incomplete.has(i + 1) || s <= 0 ? null : s));
             const totalSeconds = tracks.reduce((a, t) => a + (t.song?.lengthSeconds ?? 0), 0);
-            const discSeconds = complete
-                ? [...byDisc.entries()].sort((a, b) => a[0] - b[0]).map(([, s]) => s)
-                : [];
-            editor.setInfoBoxField("播放时长", buildDurationValue(discSeconds, totalSeconds));
+            applyDurationField(editor, discSeconds, totalSeconds);
         }
 
         if (opts.releaseDateEvent) {

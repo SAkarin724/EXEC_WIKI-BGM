@@ -367,6 +367,7 @@ module.exports = grammar({
 
     _quotable_song_title_maybecomment: $ => prec.right(seq(
       $._quotable_song_title,
+      optional($.duration),
       optional('\n'),
       optional(choice(
         seq(
@@ -384,6 +385,10 @@ module.exports = grammar({
       // lexically, creator_name > song_title
       token(prec(-1, /[^\n]/))
     )),
+    // 曲目名后的时长：`(01:38)` / `(1:39)` / `(01:02:03)`。
+    // 优先级高于 song_title 的逐字符 token，保证 `(01:38)` 不会被吞进标题；
+    // `Defectus(Intro)` 这类普通括号不匹配。
+    duration: _ => token(prec(1, /\((?:tr|m)?\.?\s*\d{1,3}(?::\d{2}){1,2}\)/i)),
 
     _quotable_creator_field_maybeparts: $ => choice(
       seq($._quotable_creator_field, optional($.parts)),

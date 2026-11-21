@@ -68,6 +68,14 @@ function partsTracksCoversionKeymap(convert: (style: 'parts' | 'tracks') => stri
     ])
 }
 
+/**
+ * 谱面里是否有参与曲目标记（`(1,2)` / `(Tr 3)`）。
+ *
+ * 节点名 `annotation` 只对应 `parts` 节点。曲目时长（`(01:38)`）曾在语法映射里也
+ * 叫 `annotation`，结果只要谱面写了时长就被当成「已有参与标记」，切换只能单向进行。
+ * 若要再给别的节点套 annotation 颜色，必须另起节点名（见 `lang-rkgk.ts` 的
+ * `NODE_TYPE_SPECS`）。
+ */
 function hasAnnotationInRange(state: EditorState, from: number = 0, to: number = state.doc.length) {
     let cursor = syntaxTree(state).cursorAt(from, 1)
     do {

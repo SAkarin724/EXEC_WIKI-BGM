@@ -106,12 +106,21 @@ function applyTypeCompletion(view: EditorView, completion: Completion, from: num
 }
 
 // Create a set of node types from lezer's default highlight tags
+// 节点名同时被当作「节点类型」用（如 `partsTracksConverter` 靠名字找 `annotation`），
+// 所以借某个 tag 的颜色不代表能共用它的名字。
+const NODE_TYPE_SPECS: [string, any][] = [
+    ["", (highlightTags as any)[""]],
+    ...Object.keys(highlightTags).map((name) => [name, (highlightTags as any)[name]] as [string, any]),
+    // 曲目时长借 annotation 的颜色，但节点名必须独立：`parts`（参与曲目标记 `(1,2)`）
+    // 也映射到 annotation，两者共名时就分不出谱面用的是哪种写法，切换参与标记会失效。
+    ["duration", highlightTags.annotation],
+];
 const NODE_TYPES = Object.fromEntries(
-    ["", ...Object.keys(highlightTags)].map((name, i) => [name,
+    NODE_TYPE_SPECS.map(([name, tag], i) => [name,
         lezer.NodeType.define({
             id: i,
             name,
-            props: [styleTags({ [name]: (highlightTags as any)[name] })],
+            props: [styleTags({ [name]: tag })],
         })])
 );
 
@@ -124,7 +133,7 @@ const FIELD2NODETYPE: { [name: string]: lezer.NodeType } = {
     "《": NODE_TYPES.keyword,
     "》": NODE_TYPES.keyword,
     "title": NODE_TYPES.heading,
-    "duration": NODE_TYPES.annotation,
+    "duration": NODE_TYPES.duration,
     "//": NODE_TYPES.comment,
     "comment": NODE_TYPES.comment,
     "DISC": NODE_TYPES.keyword,

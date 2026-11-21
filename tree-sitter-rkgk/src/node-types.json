@@ -1215,6 +1215,10 @@
             "named": false
           },
           {
+            "type": "录音师",
+            "named": false
+          },
+          {
             "type": "念白",
             "named": false
           },
@@ -1244,6 +1248,10 @@
           },
           {
             "type": "混音",
+            "named": false
+          },
+          {
+            "type": "混音师",
             "named": false
           },
           {
@@ -2514,6 +2522,10 @@
     "named": false
   },
   {
+    "type": "录音师",
+    "named": false
+  },
+  {
     "type": "念白",
     "named": false
   },
@@ -2543,6 +2555,10 @@
   },
   {
     "type": "混音",
+    "named": false
+  },
+  {
+    "type": "混音师",
     "named": false
   },
   {

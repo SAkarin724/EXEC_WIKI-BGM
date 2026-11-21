@@ -2946,6 +2946,14 @@
           "name": "role",
           "content": {
             "type": "STRING",
+            "value": "录音师"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
             "value": "原作"
           }
         },
@@ -3011,6 +3019,14 @@
           "content": {
             "type": "STRING",
             "value": "混音"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "role",
+          "content": {
+            "type": "STRING",
+            "value": "混音师"
           }
         },
         {

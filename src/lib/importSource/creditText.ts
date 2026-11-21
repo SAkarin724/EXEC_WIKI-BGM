@@ -1,7 +1,8 @@
 import { INSTRUMENT_NAMES } from '$lib/instruments';
 import { orderedEntries } from '$lib/bangumiUtils';
 import { FORMAL_ROLES, lookupLyricRole, toChineseCreatorName } from './netease';
-import type { Credits } from './common';
+import { PREFIXABLE_ROLES } from './common';
+import type { CreditCandidateFlag, Credits } from './common';
 
 /**
  * 歌词头 credits 确认窗口用到的文本规则。
@@ -12,23 +13,6 @@ import type { Credits } from './common';
  * → 乐器名补 `乐器-` → 已带可前缀职位（`乐器-竹笛`、`设计-封面`）原样
  * → 其余一律 `custom-<原文>`。
  */
-
-/** 可写 `职位-子职位` 的基础职位，与 `src/routes/postprocess.ts` 的 `PREFIXABLE_ROLES` 保持同步 */
-const PREFIXABLE_ROLES = [
-	'乐器',
-	'设计',
-	'插图',
-	'作曲',
-	'作词',
-	'编曲',
-	'制作人',
-	'声乐',
-	'和声',
-	'合唱',
-	'录音',
-	'混音',
-	'母带制作'
-];
 
 const PREFIXABLE_RE = new RegExp(`^(${PREFIXABLE_ROLES.join('|')})-.+$`);
 
@@ -100,6 +84,8 @@ export interface CreditRow {
 	auto: string | null;
 	/** 对应的歌词原文行（只用于歌词联动，改文本不动它）；人工新增行为 null */
 	raw: string | null;
+	/** 自动识别时留下的复核标记（如两级职位合并），人工新增行为 null */
+	flag?: CreditCandidateFlag | null;
 }
 
 /** 一整行「职位：人名」→ 归一后的职位 ID + 人名（冒号前后都可留空） */

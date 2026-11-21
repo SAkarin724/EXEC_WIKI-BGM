@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import Dialog from '$lib/Dialog.svelte';
-	import type { CreditLineCandidate, CreditReviewData, CreditReviewDecision } from '$lib/importSource';
+	import type {
+		CreditCandidateFlag,
+		CreditLineCandidate,
+		CreditReviewData,
+		CreditReviewDecision
+	} from '$lib/importSource';
 	import {
 		creditsFromRows,
 		lyricLines,
@@ -31,6 +36,7 @@
 		raw: string | null;
 		/** 删除时所在的位置，恢复时放回原处 */
 		pos: number;
+		flag?: CreditCandidateFlag | null;
 	}
 
 	interface Section {
@@ -39,7 +45,7 @@
 		lyric: string;
 		rows: CreditRow[];
 		/** 自动识别结果快照，点「恢复识别」时还原 */
-		autoRows: { text: string; raw: string | null }[];
+		autoRows: { text: string; raw: string | null; flag?: CreditCandidateFlag | null }[];
 		/** 从行列表里删掉的自动行，歌词区可以点回来 */
 		deleted: DeletedRow[];
 	}
@@ -54,6 +60,8 @@
 		nameless: number;
 		/** 自定义职位行数 */
 		custom: number;
+		/** 自动识别里需要人工复核的行数 */
+		flagged: number;
 	}
 
 	interface LyricState {
@@ -111,7 +119,11 @@
 	// svelte-ignore state_referenced_locally
 	let sections: Section[] = $state(
 		data.tracks.map((track) => {
-			const autoRows = track.lines.map((line) => ({ text: rowText(line), raw: line.raw }));
+			const autoRows = track.lines.map((line) => ({
+				text: rowText(line),
+				raw: line.raw,
+				flag: line.flag ?? null
+			}));
 			return {
 				songId: track.songId,
 				title: track.title,
@@ -120,7 +132,8 @@
 					id: nextRowId++,
 					text: auto.text,
 					auto: auto.text,
-					raw: auto.raw
+					raw: auto.raw,
+					flag: auto.flag
 				})),
 				autoRows,
 				deleted: []
@@ -137,7 +150,9 @@
 				changed: section.rows.filter(rowChanged).length + section.deleted.length,
 				written: lines.filter((line) => line.roleId && line.names.length > 0).length,
 				nameless: lines.filter((line) => line.names.length === 0).length,
-				custom: lines.filter((line) => line.roleId.startsWith('custom-')).length
+				custom: lines.filter((line) => line.roleId.startsWith('custom-')).length,
+				// 只需复核还保留自动识别标记、且没被改过的行（改过就算人已经看过了）
+				flagged: section.rows.filter((row) => row.flag && !rowChanged(row)).length
 			};
 		})
 	);
@@ -147,15 +162,16 @@
 			(sum, info) => ({
 				written: sum.written + info.written,
 				custom: sum.custom + info.custom,
-				changed: sum.changed + info.changed
+				changed: sum.changed + info.changed,
+				flagged: sum.flagged + info.flagged
 			}),
-			{ written: 0, custom: 0, changed: 0 }
+			{ written: 0, custom: 0, changed: 0, flagged: 0 }
 		)
 	);
 
-	/** 需要人看一眼的曲目：一条行都没有，或者有行没填人名 */
+	/** 需要人看一眼的曲目：一条行都没有、有行没填人名，或者有需要复核的自动识别行 */
 	function pending(info: SectionInfo): boolean {
-		return info.lines.length === 0 || info.nameless > 0;
+		return info.lines.length === 0 || info.nameless > 0 || info.flagged > 0;
 	}
 
 	const current = $derived(sections[currentIndex] ?? sections[0]);
@@ -223,7 +239,8 @@
 			id: nextRowId++,
 			text,
 			auto: null,
-			raw: null
+			raw: null,
+			flag: null
 		}));
 		section.rows.splice(at, 0, ...added);
 		const last = added[added.length - 1];
@@ -235,7 +252,13 @@
 		if (at < 0) return;
 		section.rows.splice(at, 1);
 		if (row.raw) {
-			section.deleted.push({ id: nextRowId++, text: row.text, raw: row.raw, pos: at });
+			section.deleted.push({
+				id: nextRowId++,
+				text: row.text,
+				raw: row.raw,
+				pos: at,
+				flag: row.flag
+			});
 		}
 		const next = section.rows[Math.min(at, section.rows.length - 1)];
 		if (next) void tick().then(() => scrollToRow(next.id, false));
@@ -247,7 +270,8 @@
 			id: nextRowId++,
 			text: entry.text,
 			auto: entry.text,
-			raw: entry.raw
+			raw: entry.raw,
+			flag: entry.flag ?? null
 		});
 		section.deleted = section.deleted.filter((item) => item.id !== entry.id);
 	}
@@ -257,7 +281,8 @@
 			id: nextRowId++,
 			text: auto.text,
 			auto: auto.text,
-			raw: auto.raw
+			raw: auto.raw,
+			flag: auto.flag ?? null
 		}));
 		section.deleted = [];
 		focusId = null;
@@ -387,6 +412,10 @@
 				<span class="text-bgm-grey/40">·</span>
 				<span>{totals.custom} 条自定义职位</span>
 			{/if}
+			{#if totals.flagged > 0}
+				<span class="text-bgm-grey/40">·</span>
+				<span class="text-[#8A5A12]">{totals.flagged} 行需核对</span>
+			{/if}
 		</div>
 	</header>
 
@@ -448,6 +477,12 @@
 								{/if}
 								{#if info.nameless > 0}
 									<span class="rounded px-1 bg-bgm-grey/15 text-bgm-grey">缺人名</span>
+								{/if}
+								{#if info.flagged > 0}
+									<span
+										class="rounded px-1 bg-[#FEF3C7] text-[#8A5A12]"
+										title="自动识别里有需要复核的写法（如一行叠写两个职位）">核对 {info.flagged}</span
+									>
 								{/if}
 								{#if info.lines.length === 0}
 									<span class="rounded px-1 bg-[#FDECEC] text-[#B32424]">无行</span>
@@ -564,6 +599,13 @@
 											onkeydown={(event) => handleKeydown(event, current, row, i)}
 											onpaste={(event) => handlePaste(event, current, row)}
 										/>
+										{#if row.flag === 'nested-role' && !changed}
+											<span
+												class="mt-1 flex-shrink-0 rounded bg-[#FEF3C7] px-1 text-[0.58rem] leading-4 text-[#8A5A12] select-none"
+												title="歌词这一行叠写了两个职位（基础职位 + 子职位），已合并成「基础职位-子职位」；写法极少见，请核对拆分是否正确"
+												>两级</span
+											>
+										{/if}
 										{#if info.names.length === 0}
 											<span class="pt-1.5 text-[0.6rem] text-bgm-grey flex-shrink-0 select-none"
 												>不写入</span
@@ -631,11 +673,21 @@
 						<span class="text-bgm-grey/40">·</span>
 						<span class="tabular-nums">{currentInfo.nameless} 行缺人名</span>
 					{/if}
+					{#if currentInfo.flagged > 0}
+						<span class="text-bgm-grey/40">·</span>
+						<span class="tabular-nums text-[#8A5A12]">{currentInfo.flagged} 行需核对</span>
+					{/if}
 					{#if currentInfo.changed > 0}
 						<span class="text-bgm-grey/40">·</span>
 						<span class="tabular-nums text-[#8A5A12]">{currentInfo.changed} 处改动</span>
 					{/if}
-					<span class="ml-auto">一行一条「职位：人名」· 回车插行 · 空行退格删行 · 可整段粘贴</span>
+					<span class="ml-auto">
+						{#if currentInfo.flagged > 0}
+							<span class="text-[#8A5A12]">「两级」= 歌词里叠写了两个职位，已合并成「基础-子」</span>
+							<span class="text-bgm-grey/40">· </span>
+						{/if}
+						一行一条「职位：人名」· 回车插行 · 空行退格删行 · 可整段粘贴
+					</span>
 				</footer>
 			{/if}
 		</section>

@@ -58,6 +58,34 @@ export interface Track {
 export type Credits = Record<string, string[]>;
 
 /**
+ * 可以写成 `职位-子职位` 的基础职位（`乐器-吉他`、`合唱-童声合唱指挥`）。
+ * 与 `src/routes/postprocess.ts` 的 `PREFIXABLE_ROLES`、tree-sitter 语法里的
+ * `prefixableRoles` 保持同步——三处不一致会出现「窗口里认了、写出去解析不了」。
+ */
+export const PREFIXABLE_ROLES = [
+    '乐器',
+    '设计',
+    '插图',
+    '作曲',
+    '作词',
+    '编曲',
+    '制作人',
+    '声乐',
+    '和声',
+    '合唱',
+    '录音',
+    '混音',
+    '母带制作'
+] as const;
+
+/**
+ * 自动识别时值得人工复核的写法。
+ * - `nested-role`：一行里写了两个职位（`合唱 Choir：童声合唱指挥…：李烨琳`），
+ *   已按 `基础职位-子职位` 合并，但正确与否得人看一眼。
+ */
+export type CreditCandidateFlag = 'nested-role';
+
+/**
  * 等待人工确认的一条候选职员行（目前来自歌词头的「职位 : 人名」）。
  * 这里只存「从原文里认出来的东西」，不做任何取舍——取舍在确认窗口里由人做。
  */
@@ -70,6 +98,8 @@ export interface CreditLineCandidate {
     names: string[];
     /** 识别出的正式职位；null = 未识别（采用时写成 `custom-<label>`） */
     role: string | null;
+    /** 自动识别里不太常见、需要校对确认的地方 */
+    flag?: CreditCandidateFlag;
 }
 
 export interface CreditReviewTrack {

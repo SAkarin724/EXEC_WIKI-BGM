@@ -13,13 +13,19 @@ const RE_LATIN_SPACE = /[A-Za-z] [A-Za-z]/;
 
 export { type Release };
 
-/** 曲目行：标题 + 可选时长 + 可选 `// 注释`，标题含职位关键词时整体加书名号 */
+/**
+ * 曲目行：标题 + 可选时长 + 可选 `// 注释`。
+ *
+ * 标题含职位关键词（`歌`、`曲` 这类单字也算）时用书名号括起来，避免被当成
+ * 制作人员行解析；时长写在书名号外面，`《13 星与舫的幽歌》 (01:41)`——
+ * 括进书名号里会连时长一起当成标题（语法里 `duration` 是标题之后的独立节点）。
+ */
 function formatTrackTitle(tr: Track, index: number, count: number): string {
-    let t = count > 1 ? `${String(index + 1).padStart(2, '0')} ${tr.title}` : tr.title;
+    const base = count > 1 ? `${String(index + 1).padStart(2, '0')} ${tr.title}` : tr.title;
+    let t = RE_ROLE_KEYWORD.test(base) ? `《${base}》` : base;
     if (typeof tr.duration === 'number' && tr.duration > 0) {
         t += ` (${secondsToTrackDuration(tr.duration)})`;
     }
-    t = RE_ROLE_KEYWORD.test(t) ? `《${t}》` : t;
     if (tr.comment) t += ` // ${tr.comment}`;
     return t;
 }

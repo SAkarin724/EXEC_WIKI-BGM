@@ -5,6 +5,7 @@ import type {
     Credits,
     SearchResultEntry,
     CreditLineCandidate,
+    CreditCandidateFlag,
     CreditReviewTrack,
     CreditReviewData,
     CreditReviewDecision
@@ -17,6 +18,7 @@ export type {
     Credits,
     SearchResultEntry,
     CreditLineCandidate,
+    CreditCandidateFlag,
     CreditReviewTrack,
     CreditReviewData,
     CreditReviewDecision

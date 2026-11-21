@@ -8,7 +8,12 @@ import type {
     Disc,
     ImportSource
 } from "./common";
-import { applyDurationField, discSecondsOf, warningTemplate3rdPartyWiki } from "./common";
+import {
+    applyDurationField,
+    discSecondsOf,
+    PREFIXABLE_ROLES,
+    warningTemplate3rdPartyWiki
+} from "./common";
 import { instrumentRole } from "$lib/instruments";
 
 /**
@@ -444,8 +449,21 @@ export function parseLyricCredits(text: string): CreditLineCandidate[] {
         if (!RE_LATIN.test(rawLabel) && label.length > 8) break;
         if (!looksLikeRoleLabel(label)) break;
 
-        const names = splitNames(m[2]);
+        // 两级职位叠写（`合唱 Choir：童声合唱指挥…：李烨琳`）：先按子职位合并再切人名
+        const nested = splitNestedRole(label, m[2]);
+        const names = splitNames(nested ? nested.names : m[2]);
         if (names.length === 0) break;
+
+        if (nested) {
+            candidates.push({
+                raw: line.text.trim(),
+                label,
+                names,
+                role: nested.role,
+                flag: 'nested-role'
+            });
+            continue;
+        }
 
         pushCandidates(candidates, label, names, line.text.trim());
     }
@@ -604,6 +622,27 @@ function pushCandidates(
     out.push({ raw, label, names, role: resolveRole(label) });
 }
 
+/**
+ * 两级职位叠写：`合唱 Choir：童声合唱指挥 Children's Choir Conductor：李烨琳 Yelin Li`
+ * → `合唱-童声合唱指挥：李烨琳`。
+ *
+ * 只认「基础职位可带子职位 + 中间那段像个职位标签」的形状，普通的 `职位：人名`
+ * 不会进这里。写法极少见，认出来之后会在确认窗口里标 `两级职位`，让人复核。
+ */
+function splitNestedRole(label: string, nameText: string): { role: string; names: string } | null {
+    const base = resolveRole(label);
+    if (!base || !(PREFIXABLE_ROLES as readonly string[]).includes(base)) return null;
+
+    const m = /^([^:：]{1,40})[:：]\s*(.+)$/.exec(nameText.trim());
+    if (!m) return null;
+
+    // 子职位也按同一套规则只留中文（`童声合唱指挥 Children's Choir Conductor`）
+    const sub = toChineseLabel(m[1].trim());
+    if (!sub || !looksLikeRoleLabel(sub)) return null;
+
+    return { role: `${base}-${sub}`, names: m[2].trim() };
+}
+
 /** 标签 -> 正式职位：先查职位别名表，再查乐器词表（`巴扬` → `乐器-巴扬`） */
 function resolveRole(label: string): string | null {
     return lookupLyricRole(label);
@@ -622,6 +661,8 @@ function mergeCandidates(lines: CreditLineCandidate[]): CreditLineCandidate[] {
         const existing = byRole.get(line.role);
         if (existing) {
             existing.names = Array.from(new Set([...existing.names, ...line.names]));
+            // 合并后仍保留「需要复核」的标记，不然合并会把它抹掉
+            if (line.flag && !existing.flag) existing.flag = line.flag;
             continue;
         }
         const copy: CreditLineCandidate = { ...line, names: [...line.names] };

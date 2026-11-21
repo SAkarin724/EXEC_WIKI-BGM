@@ -1,5 +1,6 @@
 import { TreeSitterParser, type NodeInfo } from "./treeSitterParser";
 import { durationToSeconds } from "$lib/importSource/common";
+import { INSTRUMENT_NAMES } from "$lib/instruments";
 
 import { Parser, Language as TreeSitterLanguage } from "web-tree-sitter";
 import { LanguageSupport, Language, defineLanguageFacet, languageDataProp } from "@codemirror/language";
@@ -9,7 +10,19 @@ import { type Facet } from "@codemirror/state";
 import * as lezer from "@lezer/common";
 import { tags as highlightTags, styleTags } from "@lezer/highlight";
 
-const TYPE_COMPLETIONS = [
+interface TypeCompletion {
+    label: string;
+    displayLabel?: string;
+    boost?: number;
+}
+
+/** `乐器-<乐器名>` 补全项，乐器名以 `$lib/instruments.ts` 为单一数据源 */
+const INSTRUMENT_COMPLETIONS: TypeCompletion[] = INSTRUMENT_NAMES.map((name) => ({
+    displayLabel: `乐器-${name}`,
+    label: name,
+}));
+
+const TYPE_COMPLETIONS: TypeCompletion[] = [
     { label: "Music" },
     { label: "Compose" },
     { label: "Lyrics" },
@@ -76,94 +89,14 @@ const TYPE_COMPLETIONS = [
     { displayLabel: "设计-平面设计", label: "平面设计", boost: -99 },
     { displayLabel: "客串", label: "kechuan" },
     { displayLabel: "乐器-", label: "yueqi-"},
-    { displayLabel: "乐器-Guitar", label: "Guitar" , boost: -99 },
-    { displayLabel: "乐器-Acoustic Guitar", label: "Acoustic Guitar" , boost: -99 },
-    { displayLabel: "乐器-Electric Guitar", label: "Electric Guitar" , boost: -99 },
-    { displayLabel: "乐器-Gut Guitar", label: "Gut Guitar" , boost: -99 },
-    { displayLabel: "乐器-Bass", label: "Bass" , boost: -99 },
-    { displayLabel: "乐器-Electric Bass", label: "Electric Bass" , boost: -99 },
-    { displayLabel: "乐器-Drums", label: "Drums" , boost: -99 },
-    { displayLabel: "乐器-Synthesizer", label: "Synthesizer" , boost: -99 },
-    { displayLabel: "乐器-Keyboard", label: "Keyboard" , boost: -99 },
-    { displayLabel: "乐器-Piano", label: "Piano" , boost: -99 },
-    { displayLabel: "乐器-Electric Piano", label: "Electric Piano" , boost: -99 },
-    { displayLabel: "乐器-Organ", label: "Organ" , boost: -99 },
-    { displayLabel: "乐器-Hammond Organ", label: "Hammond Organ" , boost: -99 },
-    { displayLabel: "乐器-Celesta", label: "Celesta" , boost: -99 },
-    { displayLabel: "乐器-Strings", label: "Strings" , boost: -99 },
-    { displayLabel: "乐器-Violin", label: "Violin" , boost: -99 },
-    { displayLabel: "乐器-Viola", label: "Viola" , boost: -99 },
-    { displayLabel: "乐器-Cello", label: "Cello" , boost: -99 },
-    { displayLabel: "乐器-Contrabass", label: "Contrabass" , boost: -99 },
-    { displayLabel: "乐器-Harp", label: "Harp" , boost: -99 },
-    { displayLabel: "乐器-Flute", label: "Flute" , boost: -99 },
-    { displayLabel: "乐器-Piccolo", label: "Piccolo" , boost: -99 },
-    { displayLabel: "乐器-Oboe", label: "Oboe" , boost: -99 },
-    { displayLabel: "乐器-Clarinet", label: "Clarinet" , boost: -99 },
-    { displayLabel: "乐器-Bassoon", label: "Bassoon" , boost: -99 },
-    { displayLabel: "乐器-Saxophone", label: "Saxophone" , boost: -99 },
-    { displayLabel: "乐器-Recorder", label: "Recorder" , boost: -99 },
-    { displayLabel: "乐器-Brass", label: "Brass" , boost: -99 },
-    { displayLabel: "乐器-Trumpet", label: "Trumpet" , boost: -99 },
-    { displayLabel: "乐器-Trombone", label: "Trombone" , boost: -99 },
-    { displayLabel: "乐器-French Horn", label: "French Horn" , boost: -99 },
-    { displayLabel: "乐器-Tuba", label: "Tuba" , boost: -99 },
-    { displayLabel: "乐器-Accordion", label: "Accordion" , boost: -99 },
-    { displayLabel: "乐器-Harmonica", label: "Harmonica" , boost: -99 },
-    { displayLabel: "乐器-Ukulele", label: "Ukulele" , boost: -99 },
-    { displayLabel: "乐器-Mandolin", label: "Mandolin", boost: -99  },
-    { displayLabel: "乐器-Banjo", label: "Banjo" , boost: -99 },
-    { displayLabel: "乐器-Timpani", label: "Timpani" , boost: -99 },
-    { displayLabel: "乐器-Vibraphone", label: "Vibraphone" , boost: -99 },
-    { displayLabel: "乐器-Marimba", label: "Marimba" , boost: -99 },
-    { displayLabel: "乐器-Glockenspiel", label: "Glockenspiel" , boost: -99 },
-    { displayLabel: "乐器-Xylophone", label: "Xylophone" , boost: -99 },
-    { displayLabel: "乐器-Percussion", label: "Percussion" , boost: -99 },
-    { displayLabel: "乐器-Taiko", label: "Taiko" , boost: -99 },
-    { displayLabel: "乐器-Congas", label: "Congas" , boost: -99 },
-    { displayLabel: "乐器-Bongos", label: "Bongos" , boost: -99 },
-    { displayLabel: "乐器-Tambourine", label: "Tambourine" , boost: -99 },
-    { displayLabel: "乐器-Shaker", label: "Shaker" , boost: -99 },
-    { displayLabel: "乐器-Erhu", label: "Erhu" , boost: -99 },
-    { displayLabel: "乐器-Guzheng", label: "Guzheng" , boost: -99 },
-    { displayLabel: "乐器-Pipa", label: "Pipa" , boost: -99 },
-    { displayLabel: "乐器-Guqin", label: "Guqin" , boost: -99 },
-    { displayLabel: "乐器-Yangqin", label: "Yangqin" , boost: -99 },
-    { displayLabel: "乐器-Ruan", label: "Ruan" , boost: -99 },
-    { displayLabel: "乐器-Dizi", label: "Dizi" , boost: -99 },
-    { displayLabel: "乐器-Xiao", label: "Xiao" , boost: -99 },
-    { displayLabel: "乐器-Suona", label: "Suona" , boost: -99 },
-    { displayLabel: "乐器-Sheng", label: "Sheng" , boost: -99 },
-    { displayLabel: "乐器-Hulusi", label: "Hulusi" , boost: -99 },
-    { displayLabel: "乐器-Shamisen", label: "Shamisen" , boost: -99 },
-    { displayLabel: "乐器-Koto", label: "Koto" , boost: -99 },
-    { displayLabel: "乐器-Shakuhachi", label: "Shakuhachi" , boost: -99 },
-    { displayLabel: "乐器-Taishogoto", label: "Taishogoto" , boost: -99 },
-    { displayLabel: "乐器-Sitar", label: "Sitar" , boost: -99 },
-    { displayLabel: "乐器-Bass Guitar", label: "Bass Guitar" , boost: -99 },
-    { displayLabel: "乐器-ベースギター", label: "ベースギター" , boost: -99 },
-    { displayLabel: "乐器-Keyboards", label: "Keyboards" , boost: -99 },
-    { displayLabel: "乐器-キーボード", label: "キーボード" , boost: -99 },
-    { displayLabel: "乐器-Bells", label: "Bells" , boost: -99 },
-    { displayLabel: "乐器-ベル", label: "ベル" , boost: -99 },
-    { displayLabel: "乐器-Other Instruments", label: "Other Instruments" , boost: -99 },
-    { displayLabel: "乐器-その他の楽器", label: "その他の楽器" , boost: -99 },
-    { displayLabel: "乐器-ドラム", label: "ドラム" , boost: -99 },
-    { displayLabel: "乐器-シンセサイザー", label: "シンセサイザー" , boost: -99 },
-    { displayLabel: "乐器-ピアノ", label: "ピアノ" , boost: -99 },
-    { displayLabel: "乐器-フルート", label: "フルート" , boost: -99 },
-    { displayLabel: "乐器-バイオリン", label: "バイオリン" , boost: -99 },
-    { displayLabel: "乐器-ヴィオラ", label: "ヴィオラ" , boost: -99 },
-    { displayLabel: "乐器-パーカッション", label: "パーカッション" , boost: -99 },
+    ...INSTRUMENT_COMPLETIONS,
 ];
 
 /**
- * 乐器名列表，取自上方「乐器-」补全项（单一数据源）。写法为 `乐器-<乐器名>`。
+ * 乐器名列表，来自 `$lib/instruments.ts`（单一数据源）。写法为 `乐器-<乐器名>`。
  * lint-rkgk 用它判断被当成职位写出来的乐器名（如 `Guitar：某人`）。
  */
-export const INSTRUMENT_NAMES = TYPE_COMPLETIONS
-    .filter(({ displayLabel }) => displayLabel?.startsWith("乐器-"))
-    .map(({ displayLabel }) => displayLabel!.slice("乐器-".length));
+export { INSTRUMENT_NAMES };
 
 function applyTypeCompletion(view: EditorView, completion: Completion, from: number, to: number) {
     const base = completion.displayLabel || completion.label;

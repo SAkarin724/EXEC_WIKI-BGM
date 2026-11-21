@@ -74,8 +74,34 @@ const defaultRoleOrder = [
     '插图', '原作', '出版方', '厂牌', '客串', '和声', '合唱', '人声编辑', '人声指导', '音响监督', '设计'
 ];
 
+/** `乐器-钢琴` -> `乐器`；`custom-录音棚` -> `custom` */
+function baseRoleOf(key: string): string {
+    const i = key.indexOf('-');
+    return i > 0 ? key.slice(0, i) : key;
+}
+
+const UNKNOWN_RANK = Number.MAX_SAFE_INTEGER;
+
+/**
+ * 职位的排序位次：规范职位占偶数位，子职位占其基础职位之后的奇数位
+ * （`乐器` 在 `乐器-钢琴` 前，两者都落在 `乐器` 原本的那一格）。
+ * 表里没有的职位（`custom-*`、`录音-录音棚` 之类）一律排到最后。
+ */
+function roleRank(key: string): number {
+    const exact = defaultRoleOrder.indexOf(key);
+    if (exact >= 0) return exact * 2;
+    const base = defaultRoleOrder.indexOf(baseRoleOf(key));
+    return base >= 0 ? base * 2 + 1 : UNKNOWN_RANK;
+}
+
+/**
+ * 按规范职位顺序重排 credits：`作词 → 作曲 → 编曲 → …`，`乐器-*`、`声乐-*` 等
+ * 子职位紧跟基础职位，规范表里没有的职位排在最后、彼此保持传入顺序（同职位内
+ * 人名顺序不受影响）。写入曲目信息、预览、patch 都走这里，顺序只有一处来源。
+ */
 export function orderedEntries<T>(d: Record<string, T>): [string, T][] {
-    const orderedEntries = defaultRoleOrder.filter(x => d[x]).map(x => [x, d[x]]);
-    const remainingEntries = Object.entries(d).filter(([key]) => !defaultRoleOrder.includes(key));
-    return [...orderedEntries, ...remainingEntries] as [string, T][];
+    return Object.entries(d)
+        .map(([key, value], index) => ({ key, value, rank: roleRank(key), index }))
+        .sort((a, b) => a.rank - b.rank || a.index - b.index)
+        .map(({ key, value }) => [key, value] as [string, T]);
 }

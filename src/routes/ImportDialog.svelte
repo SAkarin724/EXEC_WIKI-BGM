@@ -1,15 +1,17 @@
 <script lang="ts">
 	import Dialog from '$lib/Dialog.svelte';
-	import type { ImportSource, AutoEditor } from '$lib/importSource';
+	import type { ImportSource, AutoEditor, CreditReviewData, CreditReviewDecision } from '$lib/importSource';
 	import { Bangumi } from '$lib/importSource/bangumi';
 	import { DiverseDirect } from '$lib/importSource/diversedirect';
 	import { LinkCore } from '$lib/importSource/linkcore';
 	import { Melonbooks } from '$lib/importSource/melonbooks';
 	import { MusicBrainz } from '$lib/importSource/musicbrainz';
+	import { Netease } from '$lib/importSource/netease';
 	import { TanocStore } from '$lib/importSource/tanocstore';
 	import { TowerJp } from '$lib/importSource/towerjp';
 	import { VocaDB } from '$lib/importSource/vocadb';
 	import Button from './Button.svelte';
+	import CreditReviewDialog from './CreditReviewDialog.svelte';
 	import { tooltip } from '$lib/Tooltip.svelte';
 
 	interface ImportDialogProps {
@@ -21,6 +23,11 @@
 	let importURL = $state('');
 	let currentSourceOptions: Record<string, any> = $state({});
 	let currentResolvedTitle: Promise<string> | null = $state(null);
+	/** 有源需要人工确认（目前是网易云的歌词头）时，挂起 apply 打开确认窗口 */
+	let reviewRequest = $state<{
+		data: CreditReviewData;
+		resolve: (decisions: CreditReviewDecision[] | null) => void;
+	} | null>(null);
 
 	const sourceList: ImportSource[] = [
 		new Bangumi(),
@@ -30,7 +37,8 @@
 		new DiverseDirect(),
 		new TanocStore(),
 		new Melonbooks(),
-		new LinkCore()
+		new LinkCore(),
+		new Netease()
 	];
 	let currentSource: ImportSource | null | undefined = $derived.by(() => {
 		if (!importURL) return null;
@@ -46,6 +54,31 @@
 		);
 		currentResolvedTitle = currentSource.load(importURL);
 	});
+
+	async function performImport() {
+		const source = currentSource!;
+		let opts: Record<string, any> = currentSourceOptions;
+
+		if (source.review) {
+			let reviewData: CreditReviewData | null = null;
+			try {
+				reviewData = await source.review(opts);
+			} catch (e) {
+				// 确认步骤自己出错不打断导入：apply 会把真正的失败原因抛给用户
+				console.error(e);
+			}
+			if (reviewData) {
+				const decisions = await new Promise<CreditReviewDecision[] | null>((resolve) => {
+					reviewRequest = { data: reviewData!, resolve };
+				});
+				reviewRequest = null;
+				if (!decisions) return;
+				opts = { ...opts, creditReview: decisions };
+			}
+		}
+
+		await source.apply(opts, editor);
+	}
 </script>
 
 <Dialog bind:show class="w-96 min-h-100">
@@ -77,7 +110,7 @@
 			class="flex-basis-[4rem] text-sm"
 			disabled={currentSource === null || currentSource === undefined}
 			spinner={true}
-			onclick={async () => await currentSource!.apply(currentSourceOptions, editor)}
+			onclick={performImport}
 		>
 			来吧
 		</Button>
@@ -107,6 +140,15 @@
 		{@render blushSVG()}
 	</div>
 </Dialog>
+
+{#if reviewRequest}
+	{@const request = reviewRequest}
+	<CreditReviewDialog
+		data={request.data}
+		oncancel={() => request.resolve(null)}
+		onconfirm={(decisions) => request.resolve(decisions)}
+	/>
+{/if}
 
 {#snippet Checkbox(id: string, text: string)}
 	<div>

@@ -7,6 +7,12 @@ export interface ImportSource {
     load: (url: string) => Promise<string>;
     apply: (opts: { [key: string]: any }, editor: AutoEditor) => Promise<void>;
     search?: (query: string) => Promise<SearchResultEntry[]>;
+    /**
+     * 可选：在 apply 之前收集需要人工确认的内容（例如歌词头里的词曲信息）。
+     * 返回 null 表示这次没有可确认的东西，直接进入 apply。
+     * 确认结果由对话框写回 `opts`（约定字段见 CreditReviewDecision），apply 自行取用。
+     */
+    review?: (opts: { [key: string]: any }) => Promise<CreditReviewData | null>;
 }
 
 export interface ImportSourceOption {
@@ -50,6 +56,39 @@ export interface Track {
 }
 
 export type Credits = Record<string, string[]>;
+
+/**
+ * 等待人工确认的一条候选职员行（目前来自歌词头的「职位 : 人名」）。
+ * 这里只存「从原文里认出来的东西」，不做任何取舍——取舍在确认窗口里由人做。
+ */
+export interface CreditLineCandidate {
+    /** 原文，如 `调校 : 鬼面P` */
+    raw: string;
+    /** 原文里的职位标签，如 `调校` */
+    label: string;
+    /** 切分后的人名 */
+    names: string[];
+    /** 识别出的正式职位；null = 未识别（采用时写成 `custom-<label>`） */
+    role: string | null;
+}
+
+export interface CreditReviewTrack {
+    songId: number;
+    title: string;
+    lines: CreditLineCandidate[];
+    /** 整首歌词纯文本（已去时间戳/逐字标记），供确认窗口对照；取不到则为空串 */
+    lyric?: string;
+}
+
+export interface CreditReviewData {
+    tracks: CreditReviewTrack[];
+}
+
+/** 确认窗口的产出：每首曲目最终采用的职员 */
+export interface CreditReviewDecision {
+    songId: number;
+    credits: Credits;
+}
 
 export interface SearchResultEntry {
     title: string;

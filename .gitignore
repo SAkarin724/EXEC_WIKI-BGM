@@ -18,3 +18,4 @@ vite.config.ts.timestamp-*
 !.dev.vars.example
 
 .tmp-inspect
+/.codebuddy

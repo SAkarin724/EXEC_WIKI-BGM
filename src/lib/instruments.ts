@@ -82,6 +82,7 @@ const INSTRUMENT_PAIRS: [string, string][] = [
     ["Sitar", "西塔琴"],
     ["Domra", "多姆拉琴"],
     ["Bass Guitar", "贝斯吉他"],
+    ["Acoustic Guitar", "民谣吉他"],
     ["ベースギター", "贝斯吉他"],
     ["Keyboards", "键盘"],
     ["キーボード", "键盘"],

@@ -107,6 +107,8 @@ const RE_LATIN_SPACE = /[A-Za-z] [A-Za-z]/;
 const RE_LATIN = /[A-Za-z]/;
 /** 汉字（不含假名），用来判断「有没有中文可留」 */
 const RE_HAN = /\p{Script=Han}/u;
+/** 假名：带假名的一侧是日文，不是「另一语言的标题」 */
+const RE_KANA = /[\p{Script=Hiragana}\p{Script=Katakana}]/u;
 /** 汉字/间隔号，取人名里的中文前缀 */
 const RE_HAN_HEAD = /^[\p{Script=Han}·・]+/u;
 
@@ -298,7 +300,7 @@ export class Netease implements ImportSource {
             applyDurationField(editor, discSeconds, total);
         }
 
-        const albumTitle = opts.splitTitle ? splitBilingual(data.album.name) : null;
+        const albumTitle = opts.splitTitle ? albumBilingual(data.album.name) : null;
 
         if (opts.titleIntro) {
             editor.editTitleIntro(
@@ -705,9 +707,9 @@ function albumAliases(album: NeteaseAlbum): string[] {
 
 /** 曲名/专辑名的处理开关，都由导入选项决定 */
 interface TitleOptions {
-    /** 「别名」开关：曲名末尾的中文括注转成 `// 注释` */
+    /** 「别名」开关：网页上的别名/翻译名补进 `// 注释`、专辑别名写进 Infobox */
     alias: boolean;
-    /** 中英并列的曲名/专辑名只留中文，曲名英文进注释、专辑名英文进别名 */
+    /** 中英并列的曲名/专辑名只留中文，另一语言进曲目注释 / 专辑别名 */
     splitTitle: boolean;
 }
 
@@ -716,10 +718,16 @@ function hanCount(text: string): number {
     return text.replace(/[^\p{Script=Han}]/gu, "").length;
 }
 
+/** 纯拉丁的一侧（英文原名），带汉字/假名的就不算 */
+function isLatinOnly(text: string): boolean {
+    return RE_LATIN.test(text) && !RE_HAN.test(text) && !RE_KANA.test(text);
+}
+
 /**
- * 曲名末尾的中文括注：`Silhouette in the Waves (换装pv「浮夏丽影」配乐)`。
- * 只有括号里有两个以上汉字才当注释——`（日）`、`(Live)`、`(Bayan Version)`
- * 这类是曲名的组成部分（语言/版本标记），拆出去反而丢信息。
+ * 曲名末尾的括注 `X（Y）`：
+ * - `Y` 有两个以上汉字 → 中文括注（`Silhouette in the Waves (换装pv「浮夏丽影」配乐)`）；
+ * - `X` 是中文而 `Y` 是纯拉丁 → 括号里是英文原名（`明日殇歌（Requiem Realm）`）；
+ * - `（日）`、`(Live)`、`(Bayan Version)` 这类是曲名的组成部分，不动。
  */
 function splitTrailingParen(name: string): { main: string; note: string } | null {
     const m = /^(.*?)\s*[（(]\s*([^（）()]{1,80})\s*[）)]$/.exec(name.trim());
@@ -727,14 +735,16 @@ function splitTrailingParen(name: string): { main: string; note: string } | null
 
     const main = m[1].trim();
     const note = m[2].trim();
-    if (!main || !note || hanCount(note) < 2) return null;
+    if (!main || !note) return null;
+    if (hanCount(note) >= 2) return { main, note };
+    if (RE_HAN.test(main) && !RE_HAN.test(note) && isLatinOnly(note)) return { main, note };
 
-    return { main, note };
+    return null;
 }
 
 /**
  * 「中文 + 空格 + 英文」的并列标题：`原神-悯宥慈怜之垠 Where Mercy Endures`。
- * 第一个拉丁字母之前必须是汉字，否则不拆（纯英文标题不受影响）。
+ * 中文那一侧不能带拉丁字母，英文那一侧要是纯拉丁（`明日殇歌 feat. 初音ミク` 不拆）。
  */
 function splitBilingual(name: string): { zh: string; en: string } | null {
     const text = name.trim();
@@ -743,23 +753,47 @@ function splitBilingual(name: string): { zh: string; en: string } | null {
 
     const zh = text.slice(0, i).trim();
     const en = text.slice(i).trim();
-    if (!zh || !en || !RE_HAN.test(zh)) return null;
+    if (!zh || !en || !RE_HAN.test(zh) || RE_LATIN.test(zh)) return null;
+    if (!isLatinOnly(en)) return null;
 
     return { zh, en };
 }
 
-/** 曲名 -> 标题与 `// 注释`：括注、英文原名、网页上的翻译名都在注释里并列 */
+/**
+ * 曲名 -> 标题与 `// 注释`。
+ *
+ * 「中英并列」勾上时，`英文（中文）`、`中文（英文）`、`中文 英文` 一律把另一语言挪进
+ * 注释；「别名」勾上时网页上的翻译名/别名也补进注释。两个开关任一即可拆括注，
+ * 免得关掉别名后 `英文（中文）` 的括号留在标题里。
+ */
 function trackNameOf(song: NeteaseSong, opts: TitleOptions): { title: string; comment: string } {
     const raw = song.name.trim();
-    const paren = opts.alias ? splitTrailingParen(raw) : null;
+    const paren = opts.splitTitle || opts.alias ? splitTrailingParen(raw) : null;
     const base = paren ? paren.main : raw;
     const bilingual = opts.splitTitle ? splitBilingual(base) : null;
+    const aliasName = opts.splitTitle || opts.alias ? songAliasName(song) : "";
 
     const comment = Array.from(
-        new Set([paren?.note ?? "", bilingual?.en ?? "", songAliasName(song)].filter(Boolean))
+        new Set([paren?.note ?? "", bilingual?.en ?? "", aliasName].filter(Boolean))
     ).join(" // ");
 
     return { title: bilingual ? bilingual.zh : base, comment };
+}
+
+/**
+ * 专辑名同理，但专辑没有注释字段，英文并进 `|别名=`。
+ * `X（Y）` 只在「X 是中文、Y 是纯拉丁」时拆（`X（中文注释）` 更像注释，保持原样）。
+ */
+function albumBilingual(name: string): { zh: string; en: string } | null {
+    const paren = splitTrailingParen(name);
+    if (paren) {
+        if (RE_HAN.test(paren.main) && !RE_LATIN.test(paren.main) && isLatinOnly(paren.note)) {
+            return { zh: paren.main, en: paren.note };
+        }
+        return null;
+    }
+
+    return splitBilingual(name);
 }
 
 function buildDiscs(

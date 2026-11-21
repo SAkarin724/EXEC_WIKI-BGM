@@ -171,7 +171,8 @@ export class Netease implements ImportSource {
     match = /^https?:\/\/(?:y\.)?music\.163\.com\/(?:#\/|m\/)?album(?:\/|\?id=)(\d+)/i;
     warning = warningTemplate3rdPartyWiki("网易云音乐");
     options = [
-        { id: "trackListCredits", text: "曲目列表与制作人员", default: true },
+        { id: "trackList", text: "曲目列表", default: true },
+        { id: "credits", text: "制作人员", default: true },
         { id: "titleIntro", text: "标题与简介", default: true },
         { id: "splitTitle", text: "曲名/专辑名中英并列时只保留中文（英文写进曲目注释与专辑别名）", default: true },
         { id: "lyricCredits", text: "歌词里的词曲信息（导入前会逐曲要你确认）", default: true },
@@ -201,7 +202,8 @@ export class Netease implements ImportSource {
      * 专辑本身没取到时不在这里报错（apply 会统一报），直接返回 null。
      */
     async review(opts: { [key: string]: any }): Promise<CreditReviewData | null> {
-        if (!opts.lyricCredits || !this.albumInfo) return null;
+        // 不导入制作人员时，歌词头里的词曲信息没有落点，别拿确认窗口拦人
+        if (!opts.lyricCredits || !opts.credits || !this.albumInfo) return null;
 
         let data: AlbumData;
         try {
@@ -275,15 +277,18 @@ export class Netease implements ImportSource {
             splitTitle: !!opts.splitTitle,
         });
 
-        if (opts.trackListCredits) {
+        if (opts.trackList || opts.credits) {
             const company = data.album.company?.trim();
-            const credits: Credits = company ? { 厂牌: [quoteLabel(company)] } : {};
+            const credits: Credits = opts.credits && company ? { 厂牌: [quoteLabel(company)] } : {};
             if (discs.length === 0) {
                 editor.pushWarning("这个专辑里没有曲目");
             } else {
                 // `import` 风格按 credits 原顺序逐曲写「职位：人名」，不会像默认风格那样
                 // 按人名反向聚合再排序——窗口里的行序、预览、落盘文本三者才能一致
-                editor.setTrackInfo({ credits, discs }, 'import');
+                editor.setTrackInfo({ credits, discs }, 'import', {
+                    tracks: !!opts.trackList,
+                    credits: !!opts.credits,
+                });
             }
         }
 

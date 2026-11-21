@@ -10,7 +10,8 @@ export class Bangumi implements ImportSource {
     warning = "";
     options = [
         { id: "patch", text: "Patch补丁", default: true },
-        { id: "trackListCredits", text: "曲目列表与制作人员", default: true },
+        { id: "trackList", text: "曲目列表", default: true },
+        { id: "credits", text: "制作人员", default: true },
         { id: "length", text: "播放时长", default: true },
         { id: "importRela", text: "导入关联的人物", default: true },
         { id: "titleIntro", text: "标题与简介", default: true },
@@ -35,12 +36,13 @@ export class Bangumi implements ImportSource {
             return;
         }
 
-        if (opts.trackListCredits || opts.titleIntro || opts.infobox) {
+        const wantsTrackInfo = !!(opts.trackList || opts.credits);
+        if (wantsTrackInfo || opts.titleIntro || opts.infobox) {
             editor.setSID(this.sid);
         }
 
         let rela: SubjectRelaPerson[] | null = null;
-        if (opts.trackListCredits) {
+        if (wantsTrackInfo) {
             const subjectEpInfo = getSubjectEpInfo(this.sid);
             rela = await getSubjectRelaPerson(this.sid);
             const [aliasTable, unassociated, instTable] = resolveAlias((await this.subjectInfo!).infobox, rela, editor.associableFields);
@@ -75,7 +77,10 @@ export class Bangumi implements ImportSource {
                 const patch = await fetchStaffPatch(this.sid);
                 if (patch) trackInfo = applyStaffPatchToRelease(patch, release);
             }
-            editor.setTrackInfo(trackInfo, 'import');
+            editor.setTrackInfo(trackInfo, 'import', {
+                tracks: !!opts.trackList,
+                credits: !!opts.credits,
+            });
 
             if (opts.length) {
                 const discSeconds = discSecondsOf(trackInfo.discs);

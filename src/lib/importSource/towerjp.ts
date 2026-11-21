@@ -10,7 +10,8 @@ export class TowerJp implements ImportSource {
     match = /^https:\/\/tower\.jp\/item\/(\d+)/;
     warning = "";
     options = [
-        { id: "trackListCredits", text: "曲目列表与制作人员", default: true },
+        { id: "trackList", text: "曲目列表", default: true },
+        { id: "credits", text: "制作人员", default: true },
         { id: "titleIntro", text: "标题与简介", default: true },
         { id: "releaseDate", text: "发售日期", default: true },
         { id: "labelSerial", text: "厂牌与编号/品番", default: true },
@@ -59,12 +60,15 @@ export class TowerJp implements ImportSource {
             applyDurationField(editor, info.discSeconds, totalSeconds);
         }
 
-        if (opts.trackListCredits) {
+        if (opts.trackList || opts.credits) {
             const credit0: Credits = {};
-            if (labelVal.length > 0) {
+            if (opts.credits && labelVal.length > 0) {
                 credit0["レーベル"] = [labelVal];
             }
-            editor.setTrackInfo({ credits: credit0, discs: info.discs }, "tracks");
+            editor.setTrackInfo({ credits: credit0, discs: info.discs }, "tracks", {
+                tracks: !!opts.trackList,
+                credits: !!opts.credits,
+            });
         }
 
         editor.done();

@@ -6,7 +6,8 @@ export class MusicBrainz implements ImportSource {
     match = /^https:\/\/musicbrainz.org\/release\/([0-9a-f-]+)$/;
     warning = warningTemplate3rdPartyWiki("MusicBrainz");
     options = [
-        { id: "trackListCredits", text: "曲目列表与制作人员", default: true },
+        { id: "trackList", text: "曲目列表", default: true },
+        { id: "credits", text: "制作人员", default: true },
         { id: "title", text: "标题", default: true },
         { id: "length", text: "播放时长", default: true },
         { id: "labelSerial", text: "厂牌与编号/品番", default: true },
@@ -36,7 +37,7 @@ export class MusicBrainz implements ImportSource {
             }
         }
 
-        if (opts.trackListCredits) {
+        if (opts.trackList || opts.credits) {
             const { media, relations } = await this.releaseInfo!;
             const extraRoles = DefaultDict(() => [] as string[]);
 
@@ -85,10 +86,15 @@ export class MusicBrainz implements ImportSource {
                 })
             }));
 
-            editor.setTrackInfo({ credits: relaMap0, discs }, 'tracks');
-            Object.entries(extraRoles).forEach(([kw, names]) => {
-                editor.setInfoBoxField(kw.slice(3), Array.from(new Set(names)).join("、"));
+            editor.setTrackInfo({ credits: relaMap0, discs }, 'tracks', {
+                tracks: !!opts.trackList,
+                credits: !!opts.credits,
             });
+            if (opts.credits) {
+                Object.entries(extraRoles).forEach(([kw, names]) => {
+                    editor.setInfoBoxField(kw.slice(3), Array.from(new Set(names)).join("、"));
+                });
+            }
         }
 
         if (opts.title) {

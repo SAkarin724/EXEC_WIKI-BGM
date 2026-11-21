@@ -8,7 +8,8 @@ import type {
     CreditCandidateFlag,
     CreditReviewTrack,
     CreditReviewData,
-    CreditReviewDecision
+    CreditReviewDecision,
+    TrackInfoWriteOptions
 } from "./common";
 
 export type {
@@ -16,6 +17,7 @@ export type {
     AutoEditor,
     Release,
     Credits,
+    TrackInfoWriteOptions,
     SearchResultEntry,
     CreditLineCandidate,
     CreditCandidateFlag,

@@ -1,4 +1,4 @@
-import { type Release, type Credits } from "$lib/importSource";
+import { type Release, type Credits, type TrackInfoWriteOptions } from "$lib/importSource";
 import { type Track, secondsToTrackDuration } from "$lib/importSource/common";
 import { RE_ROLE_KEYWORD, pagenoJoin, multiDiscPageNoJoin, Role, stripRedundantAlias, Release as FormalRelease } from "./postprocess";
 import { hasArtistJoinerSyntax, isComposedName, matchCreatorUnits, resolvePlainStarring, shouldJoinStarring, splitArtistUnits } from "./artistJoiner";
@@ -30,7 +30,12 @@ function formatTrackTitle(tr: Track, index: number, count: number): string {
     return t;
 }
 
-export function writeTrackInfo(info: Release, style: 'parts' | 'tracks' | 'import' | 'default' = 'default'): string {
+export function writeTrackInfo(
+    info: Release,
+    style: 'parts' | 'tracks' | 'import' | 'default' = 'default',
+    options: TrackInfoWriteOptions = {}
+): string {
+    info = applyWriteOptions(info, options);
     switch (style) {
         case 'parts': return writeTrackInfoCreditParts(info);
         case 'tracks': return writeTrackInfoCreditTracks(info);
@@ -48,6 +53,27 @@ export function writeTrackInfo(info: Release, style: 'parts' | 'tracks' | 'impor
     });
     if (trackCreators.size >= 5) return writeTrackInfoCreditTracks(info);
     return writeTrackInfoCreditParts(info);
+}
+
+/**
+ * 「曲目列表」与「制作人员」是两个独立开关时，把不写的那一半摘掉：
+ * - `credits: false`：丢条目级与逐曲制作人员，只留曲目行；
+ * - `tracks: false`：丢曲目的时长与注释，但保留标题——逐曲制作人员要写在曲目行下面，
+ *   标题是它的归属锚点，整行去掉就不知道是谁的职员了。
+ */
+function applyWriteOptions(info: Release, { tracks = true, credits = true }: TrackInfoWriteOptions): Release {
+    if (tracks && credits) return info;
+    return {
+        credits: credits ? info.credits : {},
+        discs: info.discs.map((disc) => ({
+            tracks: disc.tracks.map((tr) => ({
+                title: tr.title,
+                comment: tracks ? tr.comment : '',
+                duration: tracks ? tr.duration : undefined,
+                credits: credits ? tr.credits : {},
+            })),
+        })),
+    };
 }
 
 function writeTrackInfoCreditTracks(info: Release): string {
@@ -116,11 +142,13 @@ function writeTrackInfoCreditParts(info: Release): string {
             });
         });
     });
-    trackInfo += orderedEntries(pt).map(([role, names]) => {
+    const creditLines = orderedEntries(pt).map(([role, names]) => {
         return `${role}：${Object.entries(names).map(([name, ps]) => {
             return `${nameEscape(name)}(${isMulti ? multiDiscPageNoJoin(ps) : pagenoJoin(ps.flat())})`;
         }).join('、')}\n`;
-    }).join('') + '\n';
+    }).join('');
+    // 不写制作人员（只导入曲目列表）时不留空行
+    if (creditLines) trackInfo += creditLines + '\n';
 
     trackInfo += info.discs.map((disc) => {
         let s = isMulti ? "\nDISC\n" : "";

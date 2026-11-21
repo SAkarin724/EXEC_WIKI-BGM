@@ -36,7 +36,7 @@
 		fromFormalRelease
 	} from './trackInfoWriter.ts';
 	import { localStorage$state } from './utils.svelte.ts';
-	import { buildDurationValue } from '$lib/importSource/common';
+	import { buildDurationValue, type TrackInfoWriteOptions } from '$lib/importSource/common';
 
 	const associableFields = new Set(Object.values(Role).slice(1));
 	const reactiveFields = new Set([...associableFields, '碟片数量']);
@@ -361,9 +361,13 @@
 			if (title) titleState.val = title;
 			if (intro) descState.val = intro;
 		},
-		setTrackInfo: (info: InfoRelease, style: 'parts' | 'tracks' | 'import' | 'default' = 'default') => {
+		setTrackInfo: (
+			info: InfoRelease,
+			style: 'parts' | 'tracks' | 'import' | 'default' = 'default',
+			options?: TrackInfoWriteOptions
+		) => {
 			preserveCircleParenthesesOnNextParse = true;
-			trackInfoState.val = writeTrackInfo(info, style);
+			trackInfoState.val = writeTrackInfo(info, style, options);
 		},
 		setTrackInfoText: (text: string) => {
 			preserveCircleParenthesesOnNextParse = true;

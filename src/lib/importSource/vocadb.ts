@@ -8,7 +8,8 @@ export class VocaDB implements ImportSource {
     match = /^https:\/\/(vocadb\.net|utaitedb\.net|touhoudb\.com)\/Al\/(\d+)$/;
     warning = warningTemplate3rdPartyWiki("VocaDB / UtaiteDB / TouhouDB");
     options = [
-        { id: "trackListCredits", text: "曲目列表与制作人员", default: true },
+        { id: "trackList", text: "曲目列表", default: true },
+        { id: "credits", text: "制作人员", default: true },
         { id: "titleIntro", text: "标题与简介", default: true },
         { id: "length", text: "播放时长", default: true },
         { id: "labelSerial", text: "厂牌与编号/品番", default: true },
@@ -27,7 +28,7 @@ export class VocaDB implements ImportSource {
     }
 
     async apply(opts: { [key: string]: any }, editor: AutoEditor): Promise<void> {
-        if (opts.trackListCredits) {
+        if (opts.trackList || opts.credits) {
             const { artists, tracks } = (await this.albumInfo)!;
 
             function addArtist(m: Record<string, string[]>, artist: ArtistInfo) {
@@ -58,11 +59,14 @@ export class VocaDB implements ImportSource {
                     credits: {}
                 });
             });
-            editor.setTrackInfo({ credits: relaMap0, discs }, 'tracks');
+            editor.setTrackInfo({ credits: relaMap0, discs }, 'tracks', {
+                tracks: !!opts.trackList,
+                credits: !!opts.credits,
+            });
         }
 
         if (opts.labelSerial) {
-            // NOTE: label, if present, is set in the `trackListCredits` part above
+            // NOTE: label, if present, is set in the `credits` part above
             const { catalogNumber } = (await this.albumInfo)!;
             if (!editor.setInfoBoxField("品番", catalogNumber, { editOnly: true })) {
                 editor.setInfoBoxField("编号", catalogNumber);

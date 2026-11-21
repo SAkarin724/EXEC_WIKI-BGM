@@ -32,7 +32,8 @@ export class LinkCore implements ImportSource {
     match = /^https?:\/\/(?:[a-z0-9-]+\.)?linkco\.re\/([A-Za-z0-9_-]+)/i;
     warning = "";
     options = [
-        { id: "trackListCredits", text: "曲目列表与制作人员", default: true },
+        { id: "trackList", text: "曲目列表", default: true },
+        { id: "credits", text: "制作人员", default: true },
         { id: "titleIntro", text: "标题与简介", default: true },
         { id: "releaseDate", text: "发售日期", default: true },
         { id: "links", text: "页面链接", default: true },
@@ -56,7 +57,7 @@ export class LinkCore implements ImportSource {
             return;
         }
 
-        if (opts.trackListCredits) {
+        if (opts.trackList || opts.credits) {
             // 逐曲写入，保留「哪首由谁演奏」；职位顺序按页面上的顺序
             const discs: Disc[] = page.discs.map((disc) => ({
                 tracks: disc.tracks.map((track) => ({
@@ -68,7 +69,10 @@ export class LinkCore implements ImportSource {
             if (discs.length === 0) {
                 editor.pushWarning("这个页面里没有找到曲目表");
             } else {
-                editor.setTrackInfo({ credits: page.credits ?? {}, discs }, "import");
+                editor.setTrackInfo({ credits: page.credits ?? {}, discs }, "import", {
+                    tracks: !!opts.trackList,
+                    credits: !!opts.credits,
+                });
             }
         }
 

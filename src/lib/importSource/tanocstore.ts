@@ -39,7 +39,8 @@ export class TanocStore implements ImportSource {
     match = /^https?:\/\/(?:www\.)?tanocstore\.net(\/.*)$/;
     warning = "";
     options = [
-        { id: "trackListCredits", text: "曲目列表与制作人员", default: true },
+        { id: "trackList", text: "曲目列表", default: true },
+        { id: "credits", text: "制作人员", default: true },
         { id: "titleIntro", text: "标题与简介", default: true },
         { id: "labelSerial", text: "厂牌与编号/品番", default: true },
         { id: "price", text: "价格", default: true },
@@ -65,22 +66,25 @@ export class TanocStore implements ImportSource {
             return;
         }
 
-        if (opts.trackListCredits) {
+        if (opts.trackList || opts.credits) {
             const credits: Credits = {};
-            if (opts.labelSerial && page.label) {
+            if (opts.credits && opts.labelSerial && page.label) {
                 credits["厂牌"] = [page.label];
             }
 
             const discs: Disc[] = page.discs.map((disc) => ({
                 tracks: disc.tracks.map((track) => {
-                    const trackCredits: Credits = track.artist ? { "艺术家": [track.artist] } : {};
+                    const trackCredits: Credits = opts.credits && track.artist ? { "艺术家": [track.artist] } : {};
                     return { title: track.title, comment: "", credits: trackCredits };
                 }),
             }));
             if (discs.length === 0) {
                 editor.pushWarning("这个页面里没有找到曲目表");
             } else {
-                editor.setTrackInfo({ credits, discs });
+                editor.setTrackInfo({ credits, discs }, 'default', {
+                    tracks: !!opts.trackList,
+                    credits: !!opts.credits,
+                });
             }
         }
 

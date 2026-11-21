@@ -21,10 +21,25 @@ export interface ImportSourceOption {
     default: any;
 }
 
+/**
+ * 曲目信息写出时的取件开关（「曲目列表」与「制作人员」是两个独立的导入选项）。
+ * 不传 = 两者都写。
+ */
+export interface TrackInfoWriteOptions {
+    /** 写不写曲目行（标题 / 时长 / 注释）；默认 true */
+    tracks?: boolean;
+    /** 写不写制作人员行（条目级与逐曲）；默认 true */
+    credits?: boolean;
+}
+
 export interface AutoEditor {
     associableFields: Set<string>;
     editTitleIntro: (title: string, intro: string) => void;
-    setTrackInfo: (info: Release, style?: 'parts' | 'tracks' | 'import') => void;
+    setTrackInfo: (
+        info: Release,
+        style?: 'parts' | 'tracks' | 'import' | 'default',
+        options?: TrackInfoWriteOptions
+    ) => void;
     setTrackInfoText: (text: string) => void;
     setInfoBox: (content: string, override: boolean) => void;
     setInfoBoxField: (field: string, value: string | [string, string][], options?: { editOnly?: boolean }) => boolean;

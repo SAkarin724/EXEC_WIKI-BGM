@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         音乐条目显示各曲目参与制作人员信息 ++ 维基端
 // @namespace    org.sakarin.bgm.music.staff.patch
-// @version      0.7.11
+// @version      0.7.12
 // @description  为 Bangumi 音乐条目提供 staff 修复编辑、预览与提交功能
 // @author       GPT / SilenceAkarin
 // @match        https://bgm.tv/*

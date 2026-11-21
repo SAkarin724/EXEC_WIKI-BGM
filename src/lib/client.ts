@@ -36,7 +36,7 @@ function normalizeSearchName(name: string): string {
     return name.normalize('NFKC').replace(/\s+/g, '').toLowerCase();
 }
 
-/** 精确同名 > 别名命中 > 前缀命中，其余按来源顺序（BGMR 的相关度排名） */
+/** 精确同名 > 别名命中 > 前缀命中，其余保持来源顺序（BGMR 的相关度排名） */
 function matchScore(staff: Staff, query: string): number {
     const staffName = normalizeSearchName(staff.name);
     const aliases = staff.aliases.map(normalizeSearchName);
@@ -52,61 +52,47 @@ function matchScore(staff: Staff, query: string): number {
     return 0;
 }
 
+function rankPerson(staffs: Staff[], query: string): Staff[] {
+    const target = normalizeSearchName(query);
+    const ranked = staffs.map((staff, index) => ({ staff, index, score: matchScore(staff, target) }));
+    ranked.sort((a, b) => b.score - a.score || a.index - b.index);
+    return ranked.map((r) => r.staff);
+}
+
+/** BGMR 的结果不带头像，缺的批量补一次；接口挂了就留空，界面会显示默认图 */
+async function fillPersonPfp(staffs: Staff[]): Promise<Staff[]> {
+    const missingPfp = staffs.filter((s) => !s.pfp).map((s) => s.id);
+    if (missingPfp.length === 0) {
+        return staffs;
+    }
+    const namePfpList = await getPersonPfpList(missingPfp).catch(() => null);
+    if (namePfpList === null) {
+        return staffs;
+    }
+    const pfpById = new Map(missingPfp.map((pid, i) => [pid, namePfpList[i].pfp]));
+    for (const staff of staffs) {
+        if (!staff.pfp && pfpById.has(staff.id)) {
+            staff.pfp = pfpById.get(staff.id) as string;
+        }
+    }
+    return staffs;
+}
+
 export async function searchPerson(name: string): Promise<Staff[]> {
     const query = name.trim();
     if (query === '') {
         return [];
     }
-    // BGM API 的人物搜索索引会漏条（例如 31411 河野ひより 根本不在结果里），结果还按 ID 排序、
-    // 默认只给 10 条，精确命中很容易被同姓的人挤掉；BGMR 按相关度排且命中更全。
-    // 两个源都问一遍再合并，只要一边挂了还能出结果。
-    const [apiResult, bgmrResult] = await Promise.all([
-        searchPersonBGMAPI(query).catch(() => [] as Staff[]),
-        searchPersonBGMR(query).catch(() => [] as BGMRPerson[]),
-    ]);
-
-    const merged = new Map<number, Staff>();
-    // 先放 BGMR 的结果，保留它的相关度顺序（同分段内靠它决定先后）
-    for (const r of bgmrResult) {
-        merged.set(r.id, { id: r.id, pfp: '', name: r.name, aliases: r.aliases });
+    // BGM API 的人物搜索索引不可靠：会漏条（例如 31411 河野ひより 根本不在结果里）、
+    // 按 ID 排序而不是相关度、默认只给 10 条。所以优先用按相关度排、命中更全的 BGMR，
+    // 它报错或者没搜到东西，才退回 BGM API。
+    const bgmrResult = await searchPersonBGMR(query).catch(() => [] as BGMRPerson[]);
+    if (bgmrResult.length > 0) {
+        const staffs = bgmrResult.map((r) => ({ id: r.id, pfp: '', name: r.name, aliases: r.aliases }));
+        return fillPersonPfp(rankPerson(staffs, query));
     }
-    for (const r of apiResult) {
-        const existing = merged.get(r.id);
-        if (existing === undefined) {
-            merged.set(r.id, r);
-            continue;
-        }
-        // API 侧的条目带头像，别名也可能更全
-        merged.set(r.id, {
-            id: r.id,
-            pfp: r.pfp,
-            name: r.name,
-            aliases: r.aliases.length > 0 ? r.aliases : existing.aliases,
-        });
-    }
-
-    const ranked = [...merged.values()].map((staff, index) => ({
-        staff,
-        index,
-        score: matchScore(staff, normalizeSearchName(query)),
-    }));
-    ranked.sort((a, b) => b.score - a.score || a.index - b.index);
-    const result = ranked.map((r) => r.staff);
-
-    // BGMR 不带头像，缺的再批量补一次
-    const missingPfp = result.filter((r) => !r.pfp).map((r) => r.id);
-    if (missingPfp.length > 0) {
-        const namePfpList = await getPersonPfpList(missingPfp).catch(() => null);
-        if (namePfpList !== null) {
-            const pfpById = new Map(missingPfp.map((pid, i) => [pid, namePfpList[i].pfp]));
-            for (const r of result) {
-                if (!r.pfp && pfpById.has(r.id)) {
-                    r.pfp = pfpById.get(r.id) as string;
-                }
-            }
-        }
-    }
-    return result;
+    const apiResult = await searchPersonBGMAPI(query).catch(() => [] as Staff[]);
+    return rankPerson(apiResult, query);
 }
 
 interface BGMRPerson {

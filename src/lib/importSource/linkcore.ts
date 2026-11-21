@@ -6,7 +6,8 @@ import { CORS_ENDPOINT } from "../client";
  *
  * 页面没有 CORS 头，且同一张专辑有 ja / en 两个语言版本，所以抓取与解析都放在
  * cors/worker.js 的 /linkcore/<code> 路由（worker 里的 parseLinkCore）：
- * 同时抓两个语言页，人名与简介取 ja、职位取 en，逐曲合并成课目列表的职员。
+ * 同时抓两个语言页，人名与简介取 ja、职位取 en，逐曲合并成课目列表的职员；
+ * 曲名后面那行逐曲艺术家（`list_song_artistname`）写成每首的 `艺术家：…`。
  * 这里只负责把结果填进编辑器。
  */
 interface PageInfo {

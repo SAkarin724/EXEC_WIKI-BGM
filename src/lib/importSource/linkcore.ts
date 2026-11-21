@@ -8,6 +8,7 @@ import { CORS_ENDPOINT } from "../client";
  * cors/worker.js 的 /linkcore/<code> 路由（worker 里的 parseLinkCore）：
  * 同时抓两个语言页，人名与简介取 ja、职位取 en，逐曲合并成课目列表的职员；
  * 曲名后面那行逐曲艺术家（`list_song_artistname`）写成每首的 `艺术家：…`。
+ * 职位表里没有的写法由 worker 统一写成 `custom-<页面原文>`（不丢人名，只留一条 warning）。
  * 这里只负责把结果填进编辑器。
  */
 interface PageInfo {

@@ -113,6 +113,22 @@
 			)
 			.join('\n');
 	}
+	/**
+	 * 「导出曲目列表」的纯文本：多碟时每碟前写 `DISC N`，单碟直接输出曲目行。
+	 * 曲目号按碟重新从 01 起；没有时长的曲目只写曲目号与曲名。
+	 */
+	function buildTrackListText(release: Readonly<Release>): string {
+		const multiDisc = release.tracks.length > 1;
+		return release.tracks
+			.flatMap((disc, i) => {
+				const lines = disc.map((tr, j) => {
+					const duration = tr.duration ? ` ${secondsToMMSS(tr.duration)}` : '';
+					return `${String(j + 1).padStart(2, '0')} ${tr.title}${duration}`;
+				});
+				return multiDisc ? [`DISC ${i + 1}`, ...lines] : lines;
+			})
+			.join('\n');
+	}
 	// `includeCover` 只有「极速打包带走」会传 true：普通打包与二连击是给已有条目
 	// 编辑用的，不需要几 MB 的封面 base64 挤进剪贴板。
 	function marshal(includeCover = true) {
@@ -185,10 +201,20 @@
 	}
 	// Copy a selective (or full, with Shift) patch generated from the current
 	// Release, ported from the "Staff Tag Fix" userscript. With Alt held, copy
-	// the track table instead.
+	// the track table instead; with Alt+Shift, the plain track list.
 	async function copyPatch() {
 		// Snapshot the modifier intent before the awaited clipboard write: the
 		// user may release Alt/Shift while the write is still in flight.
+		if (useAltShiftOnCopy) {
+			const trackList = buildTrackListText(currentRelease);
+			if (!trackList) {
+				toast('当前没有可复制的曲目', { alert: true });
+				return;
+			}
+			await navigator.clipboard.writeText(trackList);
+			toast('已复制曲目列表到剪贴板');
+			return;
+		}
 		if (useAltOnCopy) {
 			const trackTable = buildTrackTable(currentRelease);
 			if (!trackTable) {
@@ -342,8 +368,10 @@
 	// the "复制 Patch" button (hover), not from the bare key press alone.
 	let useShiftOnCopy = $derived(hoverCopyPatchBtn && shiftMode);
 	// Alt + hover switches the same button to copying the track table.
-	// Alt wins when both modifiers are held, since it is a distinct payload.
-	let useAltOnCopy = $derived(hoverCopyPatchBtn && optMode);
+	// Alt+Shift goes one step further and exports the plain track list
+	// (`DISC N` / `01 曲名 mm:ss`), so Alt alone must not swallow it.
+	let useAltShiftOnCopy = $derived(hoverCopyPatchBtn && optMode && shiftMode);
+	let useAltOnCopy = $derived(hoverCopyPatchBtn && optMode && !shiftMode);
 
 	// Re-derive the modifier state from a live event instead of toggling it on
 	// individual keyup/keydown. A swallowed keyup (Alt+Tab, IME input-mode
@@ -468,13 +496,21 @@
 			}}
 			onmousemove={syncModifiers}
 			onmouseleave={() => (hoverCopyPatchBtn = false)}
-			title={useAltOnCopy
-				? '复制曲目表（光盘|曲目|原文标题|简体中文标题|时长）到剪贴板'
-				: useShiftOnCopy
-					? '复制全部 Patch 到剪贴板'
-					: '只复制符合条件的 Patch 到剪贴板'}
+			title={useAltShiftOnCopy
+				? '复制曲目列表（DISC N / 曲目号 / 曲名 / 时长）到剪贴板'
+				: useAltOnCopy
+					? '复制曲目表（光盘|曲目|原文标题|简体中文标题|时长）到剪贴板'
+					: useShiftOnCopy
+						? '复制全部 Patch 到剪贴板'
+						: '只复制符合条件的 Patch 到剪贴板'}
 		>
-			{useAltOnCopy ? '复制曲目表' : useShiftOnCopy ? '复制全部 Patch' : '复制 Patch'}
+			{useAltShiftOnCopy
+				? '导出曲目列表'
+				: useAltOnCopy
+					? '复制曲目表'
+					: useShiftOnCopy
+						? '复制全部 Patch'
+						: '复制 Patch'}
 		</Button>
 		<Cover bind:value={coverState} />
 		<Button
